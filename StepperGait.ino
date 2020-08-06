@@ -1,33 +1,101 @@
 /* Gait cycle mimicking code for stepper motors
 
   Notes:
-  - pin assignment for Int1, Int2, Int3, Int4 is 1,3,2,4 in order.
-  - Working on realtime angle output of knee_stepper
+  - pin assignment for Int1, Int2, Int3, Int4 is 1,3,2,4 in order on MCU.
+  - HALF4WIRE is 0.9deg accuracy -> 4096 steps/rev
+  - FULL4WIRE is 1.8deg accuracy -> 2048 steps/rev
 
 */
 #include <AccelStepper.h>
 
-#define STEPS_PER_REV 8
-#define GEAR_RED 64
+AccelStepper knee_stepper(AccelStepper::HALF4WIRE, 1, 3, 2, 4);
+AccelStepper hip_stepper(AccelStepper::HALF4WIRE, 5, 7, 6, 8);
 
-//const int angle measurement
-const int STEPS_PER_OUTPUT_REV = STEPS_PER_REV * GEAR_RED;
-AccelStepper knee_stepper(STEPS_PER_REV, 1, 3, 2, 4);
+int home_pin = 23;
 
 void setup() {
-  knee_stepper.setMaxSpeed(1000.0);
-  knee_stepper.setAcceleration(1000.0);
-  knee_stepper.setSpeed(200);
-  knee_stepper.moveTo(512);
+  hip_stepper.setMaxSpeed(500.0);
+  knee_stepper.setMaxSpeed(500.0);
+
+  hip_stepper.setAcceleration(200.0);
+  knee_stepper.setAcceleration(200.0);
+  
+  pinMode(home_pin, INPUT);
+
+  Serial.begin(9600);
+  while(!Serial);
+
+  setCalibrationPosition();
 }
 
 void loop() {
-//  knee_stepper.setSpeed(1000);
-//  knee_stepper.step(100);
-//  delay(500);
+  // Home button for calibration to reset to home position
+  int homie = digitalRead(home_pin);
+  if(homie == HIGH) {
+    setCalibrationPosition();
+  }
+  Serial.println(homie);  
 
-  if (knee_stepper.distanceToGo() == 0) 
-    knee_stepper.moveTo(-knee_stepper.currentPosition());
-    
-  knee_stepper.run();
+  
+}
+
+// Calibration "Homing" procedure
+// Moves both arms into a mechanical stop, and sets position as zero.
+// Then moves both arms to the center.
+
+// Notes:
+// - runToPosition() is dodgy, replace with run() & while loops
+// - use 1024 as center if using HALF4WIRE mode, 512 for FULL4WIRE
+void setCalibrationPosition() {
+
+  // Set knee joint parameters for calibration position  
+  knee_stepper.setSpeed(100);
+  knee_stepper.moveTo(2048);
+  while(knee_stepper.currentPosition() != 2048) {
+    knee_stepper.run();
+    delay(5);
+  }
+
+  // Set hip joint parameters for calibration position
+  hip_stepper.setSpeed(100);
+  hip_stepper.moveTo(2048);
+  while(hip_stepper.currentPosition() != 2048) {
+    hip_stepper.run();
+    delay(5);
+  }
+
+  // Resest current knee position as zero
+  knee_stepper.setCurrentPosition(0);
+  knee_stepper.setMaxSpeed(500.0);
+  knee_stepper.setAcceleration(200.0);
+  knee_stepper.setSpeed(100);
+  knee_stepper.moveTo(-512);
+  while(knee_stepper.currentPosition() != -512) {
+    knee_stepper.run();
+    delay(5);
+  }
+
+  // Resest current hip position as zero
+  hip_stepper.setCurrentPosition(0);
+  hip_stepper.setMaxSpeed(500.0);
+  hip_stepper.setAcceleration(200.0);
+  hip_stepper.setSpeed(100);
+  hip_stepper.moveTo(-512);
+  while(hip_stepper.currentPosition() != -512) {
+    hip_stepper.run();
+    delay(5);
+  }
+  
+}
+
+void setNormalGait() {
+  knee_stepper.setMaxSpeed(1024.0);
+  knee_stepper.setAcceleration(200.0);
+  knee_stepper.setSpeed(512);
+  knee_stepper.moveTo(512);
+
+  hip_stepper.setMaxSpeed(1024.0);
+  hip_stepper.setAcceleration(200.0);
+  hip_stepper.setSpeed(512);
+  hip_stepper.moveTo(-512);
 }
