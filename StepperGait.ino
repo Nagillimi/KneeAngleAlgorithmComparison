@@ -80,29 +80,27 @@ void setCalibrationPosition() {
     delay(5);
   }
 
-  // Resest current knee position as zero
+  // Resest current hip and knee positions as zero
   knee_stepper.setCurrentPosition(540);
   knee_stepper.setMaxSpeed(1000.0);
   knee_stepper.setAcceleration(200.0);
-  knee_stepper.setSpeed(100);
-  knee_stepper.moveTo(0);
-  while(knee_stepper.currentPosition() != 0) {
-    knee_stepper.run();
-    delay(5);
-  }
-
-  // Resest current hip position as zero
   hip_stepper.setCurrentPosition(540);
   hip_stepper.setMaxSpeed(1000.0);
   hip_stepper.setAcceleration(200.0);
+
+  // Move to 0
+  knee_stepper.setSpeed(100);
+  knee_stepper.moveTo(0);
   hip_stepper.setSpeed(100);
   hip_stepper.moveTo(0);
-  while(hip_stepper.currentPosition() != 0) {
+  while(knee_stepper.currentPosition() != 0 && hip_stepper.currentPosition() != 0) {
+    knee_stepper.run();
+    delay(5);
     hip_stepper.run();
     delay(5);
   }
-  
 }
+
 
 void triggerTest() {
   trigger_stepper.setSpeed(500);
