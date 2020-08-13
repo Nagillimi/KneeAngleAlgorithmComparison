@@ -1,4 +1,6 @@
 // User data functions.  Modify these functions for your data items.
+// Make sure to change the range on the accelerometer!!! (MPU6050 lib)
+
 #include "UserTypes.h"
 #include "Wire.h"
 #include "I2Cdev.h"
