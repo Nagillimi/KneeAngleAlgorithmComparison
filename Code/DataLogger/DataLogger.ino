@@ -4,7 +4,7 @@
    Ben Milligan, July 2020
   
    An implementation of the UM7's SPI mode to allow for logging of 
-   3 UM7's @ 250 Hz (will duplicate data) and 2 FSR's @ 500 Hz
+   2 UM7's @ 250 Hz (will duplicate data)
    (latency of 2000 usec)into Bill Greiman's SdFat-beta library 
    ExFatLogger example. Thanks Bill!!
    
@@ -40,7 +40,7 @@ char binName[] = "ExFatLogger00.bin";
 // Try 250 with Teensy 3.6, Due, or STM32.
 // Try 2000 with AVR boards, = 500Hz
 // Try 4000 with SAMD Zero boards.
-const uint16_t LOG_INTERVAL_USEC = 2000;
+const uint16_t LOG_INTERVAL_USEC = 4000;
 
 // Initial time before logging starts, set once logging has begun
 // And total log time of session, used to print to csv file once
@@ -50,7 +50,7 @@ uint32_t t0, log_time;
 uint32_t delta = 0;
 
 // Use to compare timestamps for missed packets
-const uint16_t MAX_INTERVAL_USEC = 3000;
+const uint16_t MAX_INTERVAL_USEC = 6000;
 
 // Set USE_RTC nonzero for file timestamps.
 // RAM use will be marginal on Uno with RTClib.
