@@ -1,10 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Code",
-    "\\Code\\ExFatFormatter",
-    "\\Code\\MPU6050"
+    "\\Code"
   ],
-  "SelectedNode": "\\Code\\ExFatLogger.h",
+  "SelectedNode": "\\Code",
   "PreviewInSolutionExplorer": false
 }

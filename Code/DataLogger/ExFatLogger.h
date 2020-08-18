@@ -13,45 +13,23 @@
 
 #include "MYUM7SPI.h"
 
-MYUM7SPI imu1(6); // cs pin 1
-MYUM7SPI imu2(9); // cs pin 2
-MYUM7SPI imu3(4); // cs pin 3
-
-// FSR analog pins
-// Make sure they aren't any SPI bus pins
-int fsr_heel_pin = A8, fsr_toe_pin = A9;
+MYUM7SPI imu1(20); // cs pin 1
+MYUM7SPI imu2(21); // cs pin 2
 
 // Collection of data custom for application
 struct data_t {
   uint32_t t;
-  uint16_t fsr_heel;
-  uint16_t fsr_toe;
   float gx_1;
   float gy_1;
   float gz_1;
   float ax_1;
   float ay_1;
   float az_1;
-  int16_t roll_1;
-  int16_t pitch_1;
-  int16_t yaw_1;
   float gx_2;
   float gy_2;
   float gz_2;
   float ax_2;
   float ay_2;
   float az_2;
-  int16_t roll_2;
-  int16_t pitch_2;
-  int16_t yaw_2;
-  float gx_3;
-  float gy_3;
-  float gz_3;
-  float ax_3;
-  float ay_3;
-  float az_3;
-  int16_t roll_3;
-  int16_t pitch_3;
-  int16_t yaw_3;
 };
 #endif  // ExFatLogger_h
