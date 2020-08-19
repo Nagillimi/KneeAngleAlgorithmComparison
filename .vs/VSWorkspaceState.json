@@ -1,8 +1,12 @@
 {
   "ExpandedNodes": [
     "",
-    "\\Code"
+    "\\Code",
+    "\\Code\\DataLogger",
+    "\\Code\\MPU6050",
+    "\\Code\\SDToCSV",
+    "\\Code\\Stepper"
   ],
-  "SelectedNode": "\\Code",
+  "SelectedNode": "\\Code\\DataLogger\\ExFatLogger.h",
   "PreviewInSolutionExplorer": false
 }

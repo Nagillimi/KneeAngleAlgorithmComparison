@@ -54,6 +54,9 @@ void loop() {
   }  
 
   setNormalGait();  
+
+
+
 }
 
 // Calibration "Homing" procedure

@@ -13,8 +13,8 @@
 
 #include "MYUM7SPI.h"
 
-MYUM7SPI imu1(20); // cs pin 1
-MYUM7SPI imu2(21); // cs pin 2
+MYUM7SPI imu1(34); // cs pin 1
+MYUM7SPI imu2(33); // cs pin 2
 
 // Collection of data custom for application
 struct data_t {

@@ -662,14 +662,11 @@ void loop() {
 }
 //------------------------------------------------------------------------------
 void setup_imus(byte rate_) {
-  // Init the analog sensors
-  pinMode(fsr_heel_pin, INPUT);
-  pinMode(fsr_toe_pin, INPUT);
   // Init the SPI bus used for UM7s
   SPI1.begin();
-  SPI1.setMOSI(21);
-  SPI1.setMISO(5);
-  SPI1.setSCK(20);
+  SPI1.setMOSI(0);
+  SPI1.setMISO(1);
+  SPI1.setSCK(32);
   // Init UM7 1
   imu1.set_all_processed_rate(rate_);
   imu1.set_orientation_rate(rate_, rate_);
@@ -680,9 +677,4 @@ void setup_imus(byte rate_) {
   imu2.set_orientation_rate(rate_, rate_);
   imu2.calibrate_accelerometers();
   imu2.zero_gyros();
-  // Init UM7 3
-  imu3.set_all_processed_rate(rate_);
-  imu3.set_orientation_rate(rate_, rate_);
-  imu3.calibrate_accelerometers();
-  imu3.zero_gyros();
 }
