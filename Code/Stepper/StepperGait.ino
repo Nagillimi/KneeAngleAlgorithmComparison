@@ -41,13 +41,11 @@ void setup() {
     "\nPress the start button to begin...\n"
   );
   
-// Uncomment for button prompt  
-  while(digitalRead(home_pin) == LOW) {
-    delay(10);
-  }
+  pinMode(home_pin, INPUT); 
+  while(digitalRead(home_pin) == LOW);
   
   delay(100);
-  Serial.println("Recalibrating position");
+  Serial.println("Recalibration");
   
   setCalibrationPosition();
   triggerCalibration();
@@ -76,7 +74,7 @@ void setCalibrationPosition() {
   hip_stepper.moveTo(1024);
   while(hip_stepper.currentPosition() != 1024) {
     hip_stepper.run();
-    delay(5);
+    delay(4);
   }
   Serial.println("\t\tDone");
   delay(500);
@@ -87,10 +85,9 @@ void setCalibrationPosition() {
   knee_stepper.moveTo(1024);
   while(knee_stepper.currentPosition() != 1024) {
     knee_stepper.run();
-    delay(5);
+    delay(4);
   }
   Serial.println("\t\tDone");
-  delay(500);
 
   // Resest current hip and knee positions as zero
   knee_stepper.setCurrentPosition(540);
@@ -99,6 +96,7 @@ void setCalibrationPosition() {
   hip_stepper.setCurrentPosition(540);
   hip_stepper.setMaxSpeed(1000.0);
   hip_stepper.setAcceleration(200.0);
+  delay(500);
 
   // Move to 0
   Serial.print("Resetting both to 0...");
@@ -108,9 +106,9 @@ void setCalibrationPosition() {
   hip_stepper.moveTo(0);
   while(knee_stepper.currentPosition() != 0 && hip_stepper.currentPosition() != 0) {
     knee_stepper.run();
-    delay(5);
+    delay(4);
     hip_stepper.run();
-    delay(5);
+    delay(4);
   }
   Serial.println("\tDone");
   delay(500);
@@ -119,30 +117,35 @@ void setCalibrationPosition() {
 void triggerCalibration() {
   Serial.print("Calibrating Trigger...");
   trigger_stepper.setSpeed(1000);
-  trigger_stepper.moveTo(-2048);
-  while(trigger_stepper.currentPosition() != -2048) {
+  trigger_stepper.moveTo(-2100);
+  while(trigger_stepper.currentPosition() != -2100) {
     trigger_stepper.run();
-    delay(5);
+    delay(4);
   }
   Serial.println("\tDone");
+
+  // Reset trigger position as zero
+  trigger_stepper.setCurrentPosition(0);
+  trigger_stepper.setMaxSpeed(1000.0);
+  trigger_stepper.setAcceleration(200.0);
   delay(500);
   
   Serial.print("Loading Impulse...");
   trigger_stepper.setSpeed(1000);
-  trigger_stepper.moveTo(2020);
-  while(trigger_stepper.currentPosition() != 2020) {
+  trigger_stepper.moveTo(2090);
+  while(trigger_stepper.currentPosition() != 2090) {
     trigger_stepper.run();
-    delay(5);
+    delay(4);
   }
   Serial.println("\tDone");
   delay(500);
 
   Serial.print("Firing Impulse...");
   trigger_stepper.setSpeed(1000);
-  trigger_stepper.moveTo(2048);
-  while(trigger_stepper.currentPosition() != 2048) {
+  trigger_stepper.moveTo(2120);
+  while(trigger_stepper.currentPosition() != 2120) {
     trigger_stepper.run();
-    delay(5);
+    delay(4);
   }
   Serial.println("\tDone");
   delay(500);
@@ -237,6 +240,14 @@ void runTrial() {
       hip_stepper.run();
       delay(5);
     }
+
+    // Reset position before BAC 8, the reset
+    knee_stepper.setCurrentPosition(350);
+    knee_stepper.setMaxSpeed(1000.0);
+    knee_stepper.setAcceleration(200.0);
+    hip_stepper.setCurrentPosition(-150);
+    hip_stepper.setMaxSpeed(1000.0);
+    hip_stepper.setAcceleration(200.0);
   
     // BAC 8
     Serial.println("..8");
@@ -250,13 +261,6 @@ void runTrial() {
       hip_stepper.run();
       delay(5);
     }
-
-    knee_stepper.setCurrentPosition(0);
-    knee_stepper.setMaxSpeed(1000.0);
-    knee_stepper.setAcceleration(200.0);
-    hip_stepper.setCurrentPosition(0);
-    hip_stepper.setMaxSpeed(1000.0);
-    hip_stepper.setAcceleration(200.0);
   }
     
   // Resetting position
