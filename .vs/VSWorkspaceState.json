@@ -3,10 +3,8 @@
     "",
     "\\Code",
     "\\Code\\DataLogger",
-    "\\Code\\MPU6050",
-    "\\Code\\SDToCSV",
     "\\Code\\Stepper"
   ],
-  "SelectedNode": "\\Code\\DataLogger\\ExFatLogger.h",
+  "SelectedNode": "\\Code\\Stepper\\StepperGait.ino",
   "PreviewInSolutionExplorer": false
 }

@@ -26,6 +26,6 @@ struct data_t {
 	float ax_2;
 	float ay_2;
 	float az_2;
-  uint32_t whitespace[3];
+	uint32_t whitespace[3];
 };
 #endif  // ExFatLogger_h
