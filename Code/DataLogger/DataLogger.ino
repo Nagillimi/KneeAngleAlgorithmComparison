@@ -1,4 +1,4 @@
-/* Arduino example for a Teensy Low Latency Logger using DEDICATED SPI
+ /* Arduino example for a Teensy Low Latency Logger using DEDICATED SPI
    and formatting the SD card as exFAT (Need a card >= 32GB)
    
    Ben Milligan, July 2020
@@ -9,15 +9,14 @@
    ExFatLogger example. Thanks Bill!!
    
    Tested on:
-   - Teensy LC
-   - 
+   - [16MHz] Arduino Uno, slight lag
+   - [48MHz] Teensy LC
+   - [180MHz] Teensy 3.6, SPI only! Hardware fault in SDIO mode for both 3.5/6
    
    Notes:
    1. You need to format your SD card as exFAT before this example works,
       otherwise you can change SD_FAT_TYPE to match your SD partition.
-   2. Working on incorporating the FIFO_SDIO types.
-   3. Alter the datasets you require in ExFatLogger.h
-   4. Should use the built-in bin_to_csv function since it calculates and
+   2. Should use the built-in bin_to_csv function since it calculates and
       displays missed packets
  */
 
@@ -25,187 +24,24 @@
 #include "FreeStack.h"
 #include "ExFatLogger.h"
 
+#include "MYUM7SPI.h"
+
+MYUM7SPI imu1(15); // cs pin 1
+MYUM7SPI imu2(20); // cs pin 2
+
+#define UM7_MOSI_PIN 11
+#define UM7_MISO_PIN 12
+#define UM7_SCK_PIN 13
+
 // You may modify the log file name.  
 // Digits before the dot are file versions, don't edit them.
-char binName[] = "ExFatLogger00.bin";
-
+char binName[] = "DataLogger00.bin";
 //------------------------------------------------------------------------------
 // This example was designed for exFAT but will support FAT16/FAT32.
 // Note: Uno will not support SD_FAT_TYPE = 3.
 // SD_FAT_TYPE = 0 for SdFat/File as defined in SdFatConfig.h,
 // 1 for FAT16/FAT32, 2 for exFAT, 3 for FAT16/FAT32 and exFAT.
 #define SD_FAT_TYPE 2
-//------------------------------------------------------------------------------
-// Interval between data records in microseconds.
-// Try 250 with Teensy 3.6, Due, or STM32.
-// Try 2000 with AVR boards, = 500Hz
-// Try 4000 with SAMD Zero boards.
-const uint16_t LOG_INTERVAL_USEC = 4000;
-
-// Initial time before logging starts, set once logging has begun
-// And total log time of session, used to print to csv file once
-// converted.
-uint32_t t0, log_time;
-// Init the time delta to track missed packets
-uint32_t delta = 0;
-
-// Use to compare timestamps for missed packets
-const uint16_t MAX_INTERVAL_USEC = 6000;
-
-// Set USE_RTC nonzero for file timestamps.
-// RAM use will be marginal on Uno with RTClib.
-#define USE_RTC 0
-#if USE_RTC
-#include "RTClib.h"
-#endif  // USE_RTC
-
-// LED to light if overruns occur, define if you have one setup
-#define ERROR_LED_PIN -1
-
-/*
-  Change the value of SD_CS_PIN if you are using SPI and
-  your hardware does not use the default value, SS.
-  Common values are:
-  Arduino Ethernet shield: pin 4
-  Sparkfun SD shield: pin 8
-  Adafruit SD shields and modules: pin 10
-*/
-
-// SDCARD_SS_PIN is defined for the built-in SD on some boards.
-#ifndef SDCARD_SS_PIN
-const uint8_t SD_CS_PIN = SS;
-#else  // SDCARD_SS_PIN
-// Assume built-in SD is used.
-const uint8_t SD_CS_PIN = SDCARD_SS_PIN;
-#endif  // SDCARD_SS_PIN
-
-// FIFO SIZE - 512 byte sectors.  Modify for your board.
-#ifdef __AVR_ATmega328P__
-// Use 512 bytes for 328 boards.
-#define FIFO_SIZE_SECTORS 1
-#elif defined(__AVR__)
-// Use 2 KiB for other AVR boards.
-#define FIFO_SIZE_SECTORS 4
-#else  // __AVR_ATmega328P__
-// Use 8 KiB for non-AVR boards.
-//#define FIFO_SIZE_SECTORS 16
-// Use 2 KiB for Teensy LC
-#define FIFO_SIZE_SECTORS 4
-#endif  // __AVR_ATmega328P__
-
-// Preallocate 1GiB file.
-const uint32_t PREALLOCATE_SIZE_MiB = 1024UL;
-
-//--------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------
-// Select the fastest interface. Assumes no other SPI devices on SPI0.
-// SDIO interface still requires testing!
-#if HAS_SDIO_CLASS
-// SD config for Teensy 3.6 SDIO.
-#define SD_CONFIG SdioConfig(FIFO_SDIO)
-//--------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------
-
-#elif ENABLE_DEDICATED_SPI
-#define SD_CONFIG SdSpiConfig(SD_CS_PIN, DEDICATED_SPI)
-#else  // ENABLE_DEDICATED_SPI
-#define SD_CONFIG SdSpiConfig(SD_CS_PIN, SHARED_SPI)
-#endif  // ENABLE_DEDICATED_SPI
-
-// Save SRAM if 328.
-#ifdef __AVR_ATmega328P__
-#include "MinimumSerial.h"
-MinimumSerial MinSerial;
-#define Serial MinSerial
-#endif  // __AVR_ATmega328P__
-//==============================================================================
-// Replace logRecord(), printRecord(), and ExFatLogger.h for your sensors.
-void logRecord(data_t* data) {
-	data->t = (micros() - t0);
-	imu1.get_all_processed_data();
-	data->gx_1 = imu1.gyro_x;
-	data->gy_1 = imu1.gyro_y;
-	data->gz_1 = imu1.gyro_z;
-	data->ax_1 = imu1.accel_x;
-	data->ay_1 = imu1.accel_y;
-	data->az_1 = imu1.accel_z;
-	imu2.get_all_processed_data();
-	data->gx_2 = imu2.gyro_x;
-	data->gy_2 = imu2.gyro_y;
-	data->gz_2 = imu2.gyro_z;
-	data->ax_2 = imu2.accel_x;
-	data->ay_2 = imu2.accel_y;
-	data->az_2 = imu2.accel_z;
-}
-//------------------------------------------------------------------------------
-void printRecord(Print* pr, data_t* data) {
-	static uint32_t nr = 0;
-
-	// Print data header when no data is sent to printRecord()
-	if (!data) {
-		// File info lines
-		pr->print(F("LOG INTERVAL,"));
-		pr->print(LOG_INTERVAL_USEC);
-		pr->print(F(",microseconds"));
-		pr->println();
-		pr->print(F("TOTAL LOG TIME,"));
-		pr->print(log_time);
-		pr->print(F(",seconds"));
-		pr->println();
-
-		// Dataset Titles
-		pr->print(F("TRANSFER #"));
-		pr->print(F(",TIME"));
-		pr->print(F(",TIME DELTA"));
-		pr->print(F(",G1X"));
-		pr->print(F(",G1Y"));
-		pr->print(F(",G1Z"));
-		pr->print(F(",A1X"));
-		pr->print(F(",A1Y"));
-		pr->print(F(",A1Z"));
-		pr->print(F(",G2X"));
-		pr->print(F(",G2Y"));
-		pr->print(F(",G2Z"));
-		pr->print(F(",A2X"));
-		pr->print(F(",A2Y"));
-		pr->print(F(",A2Z"));
-		pr->println();
-		nr = 0;
-		return;
-	}
-
-	// Test if the delta is too high
-	if (data->t - delta >= MAX_INTERVAL_USEC) {
-		pr->print(F("Missed Packet(s)\n"));
-	}
-	
-	// Print data packet
-	pr->print(nr++);
-	pr->write(','); pr->print(data->t);
-	pr->write(','); pr->print(data->t - delta);
-	pr->write(','); pr->print(data->gx_1);
-	pr->write(','); pr->print(data->gy_1);
-	pr->write(','); pr->print(data->gz_1);
-	pr->write(','); pr->print(data->ax_1);
-	pr->write(','); pr->print(data->ay_1);
-	pr->write(','); pr->print(data->az_1);
-	pr->write(','); pr->print(data->gx_2);
-	pr->write(','); pr->print(data->gy_2);
-	pr->write(','); pr->print(data->gz_2);
-	pr->write(','); pr->print(data->ax_2);
-	pr->write(','); pr->print(data->ay_2);
-	pr->write(','); pr->print(data->az_2);
-	pr->println();
-
-	// Reset delta to hold time for the next packet
-	delta = data->t;
-}
-//==============================================================================
-const uint64_t PREALLOCATE_SIZE  =  (uint64_t)PREALLOCATE_SIZE_MiB << 20;
-// Max length of file name including zero byte.
-#define FILE_NAME_DIM 40
-// Max number of records to buffer while SD is busy.
-const size_t FIFO_DIM = 512*FIFO_SIZE_SECTORS/sizeof(data_t);
 
 #if SD_FAT_TYPE == 0
 typedef SdFat sd_t;
@@ -222,6 +58,79 @@ typedef FsFile file_t;
 #else  // SD_FAT_TYPE
 #error Invalid SD_FAT_TYPE
 #endif  // SD_FAT_TYPE
+//------------------------------------------------------------------------------
+// Interval between data records in microseconds.
+// Try 250 with Teensy 3.6, Due, or STM32.
+// Try 2000 with AVR boards, = 500Hz
+// Try 4000 with SAMD Zero boards, = 250Hz
+const uint16_t LOG_INTERVAL_USEC = 2000;
+// Use to compare timestamps for missed packets
+const uint16_t MAX_INTERVAL_USEC = 3000;
+//------------------------------------------------------------------------------
+// Initial time before logging starts, set once logging has begun
+// And total log time of session, used to print to csv file once
+// converted.
+uint32_t t0, log_time;
+// Init the time delta to track missed packets
+uint32_t delta = 0;
+
+// LED to light if overruns occur, define if you have one setup
+#define ERROR_LED_PIN -1
+//------------------------------------------------------------------------------
+// SDCARD_SS_PIN is defined for the built-in SD on some boards.
+#ifndef SDCARD_SS_PIN
+const uint8_t SD_CS_PIN = SS;
+#else  // SDCARD_SS_PIN
+// Assume built-in SD is used.
+const uint8_t SD_CS_PIN = SDCARD_SS_PIN;
+#endif  // SDCARD_SS_PIN
+//------------------------------------------------------------------------------
+// FIFO SIZE - 512 byte sectors.  Modify for your board.
+#ifdef __AVR_ATmega328P__
+// Use 512 bytes for 328 boards.
+#define FIFO_SIZE_SECTORS 1
+#elif defined(__AVR__)
+// Use 2 KiB for other AVR boards.
+#define FIFO_SIZE_SECTORS 4
+#else  // __AVR_ATmega328P__
+// Use 8 KiB for non-AVR boards.
+//#define FIFO_SIZE_SECTORS 16
+// Use 8 KiB for Teensy 3.6
+#define FIFO_SIZE_SECTORS 16
+#endif  // __AVR_ATmega328P__
+//------------------------------------------------------------------------------
+// Preallocate 1GiB file.
+const uint32_t PREALLOCATE_SIZE_MiB = 1024UL;
+// Conversion to 64b variable to match the library param
+const uint64_t PREALLOCATE_SIZE  =  (uint64_t)PREALLOCATE_SIZE_MiB << 20;
+//------------------------------------------------------------------------------
+// Select the appropriate SPI configuration. 
+// ENABLE_DEDICATED_SPI default is true for Teensy boards, change this in
+// SdFatConfig.h to zero if you want a (slower) shared SPI bus.
+#if ENABLE_DEDICATED_SPI
+#define SD_CONFIG SdSpiConfig(SD_CS_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))
+#else  // ENABLE_DEDICATED_SPI
+// Shared SPI bus, MAY need to alter the 50MHz depending on if it's already declared
+#define SD_CONFIG SdSpiConfig(SD_CS_PIN, SHARED_SPI, SD_SCK_MHZ(50))
+#endif  // ENABLE_DEDICATED_SPI
+//------------------------------------------------------------------------------
+// Save SRAM if 328.
+#ifdef __AVR_ATmega328P__
+#include "MinimumSerial.h"
+MinimumSerial MinSerial;
+#define Serial MinSerial
+#endif  // __AVR_ATmega328P__
+
+// Boolean used to track whether or not you're just testing the sensors. Won't print
+// the "Missed packet(s)" everytime when testing, otherwise printed in data logging.
+bool test = false;
+
+// Max length of file name including zero byte.
+#define FILE_NAME_DIM 40
+
+// Max number of records to buffer while SD is busy. Should alter factors to result
+// in an integer! (Faster writes)
+const size_t FIFO_DIM = 512 * FIFO_SIZE_SECTORS / sizeof(data_t);
 
 // Create single sd type
 sd_t sd;
@@ -229,29 +138,94 @@ sd_t sd;
 // Create two filetypes
 file_t binFile;
 file_t csvFile;
-
-//------------------------------------------------------------------------------
-#if USE_RTC
-RTC_DS1307 rtc;
-
-// Call back for file timestamps.  Only called for file create and sync().
-void dateTime(uint16_t* date, uint16_t* time, uint8_t* ms10) {
-  DateTime now = rtc.now();
-
-  // Return date using FS_DATE macro to format fields.
-  *date = FS_DATE(now.year(), now.month(), now.day());
-
-  // Return time using FS_TIME macro to format fields.
-  *time = FS_TIME(now.hour(), now.minute(), now.second());
-
-  // Return low time bits in units of 10 ms.
-  *ms10 = now.second() & 1 ? 100 : 0;
+//==============================================================================
+// Replace logRecord(), printRecord(), and ExFatLogger.h for your sensors.
+void logRecord(data_t* data) {
+  data->t = (micros() - t0);
+  imu1.get_bens_data();
+  data->gx_1 = imu1.gyro_x;
+  data->gy_1 = imu1.gyro_y;
+  data->gz_1 = imu1.gyro_z;
+  data->ax_1 = imu1.accel_x;
+  data->ay_1 = imu1.accel_y;
+  data->az_1 = imu1.accel_z;
+  imu2.get_bens_data();
+  data->gx_2 = imu2.gyro_x;
+  data->gy_2 = imu2.gyro_y;
+  data->gz_2 = imu2.gyro_z;
+  data->ax_2 = imu2.accel_x;
+  data->ay_2 = imu2.accel_y;
+  data->az_2 = imu2.accel_z;
 }
-#endif  // USE_RTC
+//------------------------------------------------------------------------------
+void printRecord(Print* pr, data_t* data, bool test_) {
+  static uint32_t nr = 0;
+
+  // Print data header when no data is sent to printRecord()
+  if (!data) {
+    // File info lines
+    pr->print(F("LOG INTERVAL,"));
+    pr->print(LOG_INTERVAL_USEC);
+    pr->print(F(",microseconds"));
+    pr->println();
+    pr->print(F("TOTAL LOG TIME,"));
+    pr->print(log_time);
+    pr->print(F(",seconds"));
+    pr->println();
+
+    // Dataset Titles
+    pr->print(F("TRANSFER #"));
+    pr->print(F(",TIME"));
+    pr->print(F(",TIME DELTA"));
+    pr->print(F(",G1X"));
+    pr->print(F(",G1Y"));
+    pr->print(F(",G1Z"));
+    pr->print(F(",A1X"));
+    pr->print(F(",A1Y"));
+    pr->print(F(",A1Z"));
+    pr->print(F(",G2X"));
+    pr->print(F(",G2Y"));
+    pr->print(F(",G2Z"));
+    pr->print(F(",A2X"));
+    pr->print(F(",A2Y"));
+    pr->print(F(",A2Z"));
+    pr->println();
+    nr = 0;
+    return;
+  }
+
+  // Test if the delta is too high. (test_) is used to track whether or
+  // not you're just testing the sensors at super low rates.
+  if (data->t - delta >= MAX_INTERVAL_USEC && !test_) {
+    pr->print(F("Missed Packet(s)\n"));
+  }
+  
+  // Print data packet
+  pr->print(nr++);
+  pr->write(','); pr->print(data->t);
+  pr->write(','); pr->print(data->t - delta);
+  pr->write(','); pr->print(data->gx_1);
+  pr->write(','); pr->print(data->gy_1);
+  pr->write(','); pr->print(data->gz_1);
+  pr->write(','); pr->print(data->ax_1);
+  pr->write(','); pr->print(data->ay_1);
+  pr->write(','); pr->print(data->az_1);
+  pr->write(','); pr->print(data->gx_2);
+  pr->write(','); pr->print(data->gy_2);
+  pr->write(','); pr->print(data->gz_2);
+  pr->write(','); pr->print(data->ax_2);
+  pr->write(','); pr->print(data->ay_2);
+  pr->write(','); pr->print(data->az_2);
+  pr->println();
+
+  // Reset delta to hold time for the next packet
+  delta = data->t;
+}
+//==============================================================================
 //------------------------------------------------------------------------------
 #define error(s) sd.errorHalt(&Serial, F(s))
 #define dbgAssert(e) ((e) ? (void)0 : error("assert " #e))
-//-----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // Convert binary file to csv file.
 void binaryToCsv() {
   uint8_t lastPct = 0;
@@ -264,7 +238,7 @@ void binaryToCsv() {
   uint32_t tPct = millis();
   
   // Prints header for csv file
-  printRecord(&csvFile, nullptr);
+  printRecord(&csvFile, nullptr, test);
 
   // Loop runs until user types a character or
   // once the conversion is complete
@@ -278,7 +252,7 @@ void binaryToCsv() {
     // nr is the number of data_t instances logged
     size_t nr = nb/sizeof(data_t);
     for (size_t i = 0; i < nr; i++) {
-      printRecord(&csvFile, &binData[i]);
+      printRecord(&csvFile, &binData[i], test);
     }
 
     if ((millis() - tPct) > 1000) {
@@ -321,7 +295,7 @@ void createBinFile() {
     }
   }
   if (!binFile.open(binName, O_RDWR | O_CREAT)) {
-    error("open binName failed");
+    error("open binary file failed");
   }
   Serial.println(binName);
   if (!binFile.preAllocate(PREALLOCATE_SIZE)) {
@@ -391,6 +365,7 @@ void logData() {
   // Time to log next record.
   uint32_t logTime = micros();
   while (true) {
+    
     // Time for next data record.
     logTime += LOG_INTERVAL_USEC;
 
@@ -404,10 +379,13 @@ void logData() {
     while (delta < 0) {
       delta = micros() - logTime;
     }
-
+    
     if (fifoCount < FIFO_DIM) {
+      
       uint32_t m = micros();
       logRecord(fifoData + fifoHead);
+        
+
       m = micros() - m;
       if (m > maxLogMicros) {
         maxLogMicros = m;
@@ -436,6 +414,7 @@ void logData() {
     }
     // Write data if SD is not busy.
     if (!sd.card()->isBusy()) {
+      
       size_t nw = fifoHead > fifoTail ? fifoCount : FIFO_DIM - fifoTail;
       // Limit write time by not writing more than 512 bytes.
       const size_t MAX_WRITE = 512/sizeof(data_t);
@@ -521,13 +500,13 @@ void printData() {
   serialClearInput();
   Serial.println(F("type any character to stop\n"));
   delay(1000);
-  printRecord(&Serial, nullptr);
+  printRecord(&Serial, nullptr, test);
   while (binFile.available() && !Serial.available()) {
     data_t record;
     if (binFile.read(&record, sizeof(data_t)) != sizeof(data_t)) {
       error("read binFile failed");
     }
-    printRecord(&Serial, &record);
+    printRecord(&Serial, &record, test);
   }
 }
 //------------------------------------------------------------------------------
@@ -572,7 +551,7 @@ void testSensor() {
   serialClearInput();
   Serial.println(F("\nTesting - type any character to stop\n"));
   delay(1000);
-  printRecord(&Serial, nullptr);
+  printRecord(&Serial, nullptr, false);
   uint32_t m = micros();
   while (!Serial.available()) {
     m += interval;
@@ -580,7 +559,7 @@ void testSensor() {
       diff = m - micros();
     } while (diff > 0);
     logRecord(&data);
-    printRecord(&Serial, &data);
+    printRecord(&Serial, &data, test);
   }
 }
 //------------------------------------------------------------------------------
@@ -644,17 +623,20 @@ void loop() {
     openBinFile();
   } else if (c == 'c') {
     if (createCsvFile()) {
+      test = false;
       binaryToCsv();
     }
   } else if (c == 'l') {
     Serial.println(F("ls:"));
     sd.ls(&Serial, LS_DATE | LS_SIZE);
   } else if (c == 'p') {
+    test = false;
     printData();
   } else if (c == 'r') {
     createBinFile();
     logData();
   } else if (c == 't') {
+    test = true;
     testSensor();
   } else {
     Serial.println(F("Invalid entry"));
@@ -663,10 +645,10 @@ void loop() {
 //------------------------------------------------------------------------------
 void setup_imus(byte rate_) {
   // Init the SPI bus used for UM7s
-  SPI1.begin();
-  SPI1.setMOSI(0);
-  SPI1.setMISO(1);
-  SPI1.setSCK(32);
+  SPI.begin();
+  SPI.setMOSI(UM7_MOSI_PIN);
+  SPI.setMISO(UM7_MISO_PIN);
+  SPI.setSCK(UM7_SCK_PIN);
   // Init UM7 1
   imu1.set_all_processed_rate(rate_);
   imu1.set_orientation_rate(rate_, rate_);
