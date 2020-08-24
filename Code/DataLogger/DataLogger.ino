@@ -134,7 +134,8 @@ file_t csvFile;
 //==============================================================================
 // Replace logRecord(), printRecord(), and ExFatLogger.h for your sensors.
 void logRecord(data_t* data) {
-  String result = "";
+  int32_t result;
+//  byte bytes[4];
   data->t = (micros() - t0);
   imu1.get_bens_data();
   data->gx_1 = imu1.gyro_x;
@@ -150,11 +151,9 @@ void logRecord(data_t* data) {
   data->ax_2 = imu2.accel_x;
   data->ay_2 = imu2.accel_y;
   data->az_2 = imu2.accel_z;
-  Wire.requestFrom(9, 3); // address, howManyBytes
-  for(int i = 0; i < 3; i++) {
-    char b = Wire.read();
-    result += b;
-  }
+  Wire.requestFrom(9, 4); // address, howManyBytes
+  result = (int32_t)(((Wire.read() << 24) | Wire.read() << 16) | Wire.read() << 8) | Wire.read();
+
   Serial.println(result);
   data->knee_stepper = result;
 }
