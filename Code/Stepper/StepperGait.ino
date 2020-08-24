@@ -22,41 +22,44 @@ AccelStepper trigger_stepper(AccelStepper::FULL4WIRE, 4, 6, 5, 7); // 4 - 7
 
 int home_pin = 13;
 const int strides = 100;
-float knee_angle;
+long knee_;
 
 void setup() {
-	Wire.begin(9);
-	// Angle requested from 3.6
-	//Wire.onRequest(sendAngle);
-	
-	hip_stepper.setMaxSpeed(500.0);
-	knee_stepper.setMaxSpeed(500.0);
-	trigger_stepper.setMaxSpeed(1000.0);
-
-	hip_stepper.setAcceleration(200.0);
-	knee_stepper.setAcceleration(200.0);
-	trigger_stepper.setAcceleration(200.0);
-
-	Serial.begin(9600);
-	delay(100);
-	Serial.println(
-		"Stepper Motor Gait System"
-		"\nMimicks the full gait cycle of one leg from stance, stride, swing"
-		"\nBAC phases are tracked and recorded over Serial.\n"
-		"\nPress the start button to begin...\n"
-	);
+  // Begin as slave address 9:
+  Wire.begin(9);
+  Wire.setSDA(18);
+  Wire.setSCL(19);
+//  Wire.onReceive(receiveEvent);
+  Wire.onRequest(requestEvent);
   
-	pinMode(home_pin, INPUT); 
-	while(digitalRead(home_pin) == LOW);
-  
-	delay(100);
-	Serial.println("Recalibration");
-  
-	setCalibrationPosition();
-	triggerCalibration();
+  hip_stepper.setMaxSpeed(500.0);
+  knee_stepper.setMaxSpeed(500.0);
+  trigger_stepper.setMaxSpeed(1000.0);
 
-	Serial.println("Calibrated.\n");
-	delay(500);
+  hip_stepper.setAcceleration(200.0);
+  knee_stepper.setAcceleration(200.0);
+  trigger_stepper.setAcceleration(200.0);
+
+  Serial.begin(9600);
+  delay(100);
+  Serial.println(
+    "Stepper Motor Gait System"
+    "\nMimicks the full gait cycle of one leg from stance, stride, swing"
+    "\nBAC phases are tracked and recorded over Serial.\n"
+    "\nPress the start button to begin...\n"
+  );
+  
+  pinMode(home_pin, INPUT); 
+  while(digitalRead(home_pin) == LOW);
+  
+  delay(100);
+  Serial.println("Recalibration");
+  
+  setCalibrationPosition();
+  triggerCalibration();
+
+  Serial.println("Calibrated.\n");
+  delay(500);
 }
 
 void loop() {
@@ -65,11 +68,23 @@ void loop() {
   while(1);
 }
 
-void sendAngle(int knee_) {
-	knee_angle = map(knee_, 0, 2038, 0, 360);
-	Wire.beginTransmission(9);
-	Wire.write(knee_angle);
-	Wire.endTransmission();
+void requestEvent() {
+//  int32_t val = (int32_t)(knee_ * (90/512));
+  byte bytes[8];
+//  bytes[0] = (knee_ >> 56) & 0xFF;
+//  bytes[1] = (knee_ >> 48) & 0xFF;
+//  bytes[2] = (knee_ >> 40) & 0xFF;
+//  bytes[3] = (knee_ >> 32) & 0xFF;
+//  bytes[4] = (knee_ >> 24) & 0xFF;
+//  bytes[5] = (knee_ >> 16) & 0xFF;
+//  bytes[6] = (knee_ >> 8) & 0xFF;
+//  bytes[7] = knee_ & 0xFF;
+
+  String result = (String)knee_;
+  for(int i = 0; i < 3; i++) {
+    bytes[i] = (byte)result.charAt(i);
+  }
+  Wire.write(bytes, sizeof(bytes));
 }
 
 // Calibration "Homing" procedure
@@ -118,11 +133,10 @@ void setCalibrationPosition() {
   hip_stepper.moveTo(0);
   while(knee_stepper.currentPosition() != 0 && hip_stepper.currentPosition() != 0) {
     knee_stepper.run();
-    delay(4);
+    knee_ = knee_stepper.currentPosition();
+    delay(5);
     hip_stepper.run();
-    delay(4);
-
-	sendAngle(knee_stepper.currentPosition());
+    delay(5);
   }
   Serial.println("\tDone");
   delay(500);
@@ -131,8 +145,8 @@ void setCalibrationPosition() {
 void triggerCalibration() {
   Serial.print("Calibrating Trigger...");
   trigger_stepper.setSpeed(1000);
-  trigger_stepper.moveTo(-2100);
-  while(trigger_stepper.currentPosition() != -2100) {
+  trigger_stepper.moveTo(-500);
+  while(trigger_stepper.currentPosition() != -500) {
     trigger_stepper.run();
     delay(4);
   }
@@ -169,8 +183,7 @@ void triggerCalibration() {
 // Cycles through Gait Phases BAC 1 to BAC 8
 void runTrial() {
   for(int i = 1; i <= strides; i++) {
-    
-  
+      
     Serial.print("Step "); Serial.print(i);
     // BAC 1
     Serial.print(": BAC 1");
@@ -189,6 +202,7 @@ void runTrial() {
     hip_stepper.moveTo(-300);
     while(knee_stepper.currentPosition() != 150 && hip_stepper.currentPosition() != -300) {
       knee_stepper.run();
+      knee_ = knee_stepper.currentPosition();
       delay(5);
       hip_stepper.run();
       delay(5);
@@ -202,6 +216,7 @@ void runTrial() {
     hip_stepper.moveTo(0);
     while(knee_stepper.currentPosition() != 0 && hip_stepper.currentPosition() != 0) {
       knee_stepper.run();
+      knee_ = knee_stepper.currentPosition();
       delay(5);
       hip_stepper.run();
       delay(5);
@@ -224,6 +239,7 @@ void runTrial() {
     hip_stepper.moveTo(200);
     while(knee_stepper.currentPosition() != 150 && hip_stepper.currentPosition() != 200) {
       knee_stepper.run();
+      knee_ = knee_stepper.currentPosition();
       delay(5);
       hip_stepper.run();
       delay(5);
@@ -237,6 +253,7 @@ void runTrial() {
     hip_stepper.moveTo(50);
     while(knee_stepper.currentPosition() != 300 && hip_stepper.currentPosition() != 50) {
       knee_stepper.run();
+      knee_ = knee_stepper.currentPosition();
       delay(5);
       hip_stepper.run();
       delay(5);
@@ -250,6 +267,7 @@ void runTrial() {
     hip_stepper.moveTo(-150);
     while(knee_stepper.currentPosition() != 350 && hip_stepper.currentPosition() != -150) {
       knee_stepper.run();
+      knee_ = knee_stepper.currentPosition();
       delay(5);
       hip_stepper.run();
       delay(5);
@@ -271,6 +289,7 @@ void runTrial() {
     hip_stepper.moveTo(0);
     while(knee_stepper.currentPosition() != 0 && hip_stepper.currentPosition() != 0) {
       knee_stepper.run();
+      knee_ = knee_stepper.currentPosition();
       delay(5);
       hip_stepper.run();
       delay(5);
@@ -285,6 +304,7 @@ void runTrial() {
   hip_stepper.moveTo(0);
   while(knee_stepper.currentPosition() != 0 && hip_stepper.currentPosition() != 0) {
     knee_stepper.run();
+    knee_ = knee_stepper.currentPosition();
     delay(5);
     hip_stepper.run();
     delay(5);
