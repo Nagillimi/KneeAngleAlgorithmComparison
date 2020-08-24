@@ -24,14 +24,6 @@
 #include "FreeStack.h"
 #include "ExFatLogger.h"
 #include "Wire.h"
-#include "MYUM7SPI.h"
-
-MYUM7SPI imu1(15); // cs pin 1
-MYUM7SPI imu2(20); // cs pin 2
-
-#define UM7_MOSI_PIN 11
-#define UM7_MISO_PIN 12
-#define UM7_SCK_PIN 13
 
 // You may modify the log file name.  
 // Digits before the dot are file versions, don't edit them.
@@ -63,9 +55,9 @@ typedef FsFile file_t;
 // Try 250 with Teensy 3.6, Due, or STM32.
 // Try 2000 with AVR boards, = 500Hz
 // Try 4000 with SAMD Zero boards, = 250Hz
-const uint16_t LOG_INTERVAL_USEC = 2000;
+const uint16_t LOG_INTERVAL_USEC = 4000;
 // Use to compare timestamps for missed packets
-const uint16_t MAX_INTERVAL_USEC = 3000;
+const uint16_t MAX_INTERVAL_USEC = 6000;
 //------------------------------------------------------------------------------
 // Initial time before logging starts, set once logging has begun
 // And total log time of session, used to print to csv file once
@@ -138,9 +130,11 @@ sd_t sd;
 // Create two filetypes
 file_t binFile;
 file_t csvFile;
+
 //==============================================================================
 // Replace logRecord(), printRecord(), and ExFatLogger.h for your sensors.
 void logRecord(data_t* data) {
+  String result = "";
   data->t = (micros() - t0);
   imu1.get_bens_data();
   data->gx_1 = imu1.gyro_x;
@@ -156,8 +150,13 @@ void logRecord(data_t* data) {
   data->ax_2 = imu2.accel_x;
   data->ay_2 = imu2.accel_y;
   data->az_2 = imu2.accel_z;
-  Wire.requestFrom(9);
-  data->knee_stepper = Wire.read();
+  Wire.requestFrom(9, 3); // address, howManyBytes
+  for(int i = 0; i < 3; i++) {
+    char b = Wire.read();
+    result += b;
+  }
+  Serial.println(result);
+  data->knee_stepper = result;
 }
 //------------------------------------------------------------------------------
 void printRecord(Print* pr, data_t* data, bool test_) {
@@ -191,7 +190,7 @@ void printRecord(Print* pr, data_t* data, bool test_) {
     pr->print(F(",A2X"));
     pr->print(F(",A2Y"));
     pr->print(F(",A2Z"));
-	pr->print(F("KNEE STEPPER"));
+    pr->print(F(",KNEE STEPPER"));
     pr->println();
     nr = 0;
     return;
@@ -378,7 +377,7 @@ void logData() {
     if (delta > 0) {
       Serial.print(F("delta: "));
       Serial.println(delta);
-      error("Rate too fast");
+//      error("Rate too fast");
     }
     while (delta < 0) {
       delta = micros() - logTime;
@@ -572,9 +571,11 @@ void setup() {
     pinMode(ERROR_LED_PIN, OUTPUT);
     digitalWrite(ERROR_LED_PIN, HIGH);
   }
-
+  
   // Being I2C as Master
   Wire.begin();
+  Wire.setSDA(18);
+  Wire.setSCL(19);
 
   Serial.begin(9600);
 
