@@ -10,6 +10,20 @@
 */
 #ifndef ExFatLogger_h
 #define ExFatLogger_h
+#include "MYUM7SPI.h"
+
+MYUM7SPI imu1(15); // cs pin 1
+MYUM7SPI imu2(20); // cs pin 2
+
+#define UM7_MOSI_PIN 11
+#define UM7_MISO_PIN 12
+#define UM7_SCK_PIN 13
+
+// Custom type to combine a float with its components
+typedef union {
+  float val;
+  byte bytes[4];
+} floatval;
 
 // Collection of data custom for application
 struct data_t {
@@ -26,7 +40,7 @@ struct data_t {
 	float ax_2;
 	float ay_2;
 	float az_2;
-	float knee_stepper;
-	uint32_t whitespace[2];
+  String knee_stepper;
+  uint32_t whitespace[2];
 };
 #endif  // ExFatLogger_h
