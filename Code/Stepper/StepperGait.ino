@@ -69,21 +69,14 @@ void loop() {
 }
 
 void requestEvent() {
-//  int32_t val = (int32_t)(knee_ * (90/512));
-  byte bytes[8];
-//  bytes[0] = (knee_ >> 56) & 0xFF;
-//  bytes[1] = (knee_ >> 48) & 0xFF;
-//  bytes[2] = (knee_ >> 40) & 0xFF;
-//  bytes[3] = (knee_ >> 32) & 0xFF;
-//  bytes[4] = (knee_ >> 24) & 0xFF;
-//  bytes[5] = (knee_ >> 16) & 0xFF;
-//  bytes[6] = (knee_ >> 8) & 0xFF;
-//  bytes[7] = knee_ & 0xFF;
+  int val = (int)(knee_);
+  byte bytes[4];
 
-  String result = (String)knee_;
-  for(int i = 0; i < 3; i++) {
-    bytes[i] = (byte)result.charAt(i);
-  }
+  bytes[0] = (val >> 24) & 0xFF;
+  bytes[1] = (val >> 16) & 0xFF;
+  bytes[2] = (val >> 8) & 0xFF;
+  bytes[3] = val & 0xFF;
+
   Wire.write(bytes, sizeof(bytes));
 }
 
