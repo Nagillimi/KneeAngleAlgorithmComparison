@@ -23,7 +23,7 @@
 #include "SdFat.h"
 #include "FreeStack.h"
 #include "ExFatLogger.h"
-
+#include "Wire.h"
 #include "MYUM7SPI.h"
 
 MYUM7SPI imu1(15); // cs pin 1
@@ -156,6 +156,8 @@ void logRecord(data_t* data) {
   data->ax_2 = imu2.accel_x;
   data->ay_2 = imu2.accel_y;
   data->az_2 = imu2.accel_z;
+  Wire.requestFrom(9);
+  data->knee_stepper = Wire.read();
 }
 //------------------------------------------------------------------------------
 void printRecord(Print* pr, data_t* data, bool test_) {
@@ -189,6 +191,7 @@ void printRecord(Print* pr, data_t* data, bool test_) {
     pr->print(F(",A2X"));
     pr->print(F(",A2Y"));
     pr->print(F(",A2Z"));
+	pr->print(F("KNEE STEPPER"));
     pr->println();
     nr = 0;
     return;
@@ -216,6 +219,7 @@ void printRecord(Print* pr, data_t* data, bool test_) {
   pr->write(','); pr->print(data->ax_2);
   pr->write(','); pr->print(data->ay_2);
   pr->write(','); pr->print(data->az_2);
+  pr->write(','); pr->print(data->knee_stepper);
   pr->println();
 
   // Reset delta to hold time for the next packet
@@ -568,6 +572,10 @@ void setup() {
     pinMode(ERROR_LED_PIN, OUTPUT);
     digitalWrite(ERROR_LED_PIN, HIGH);
   }
+
+  // Being I2C as Master
+  Wire.begin();
+
   Serial.begin(9600);
 
   // Wait for USB Serial

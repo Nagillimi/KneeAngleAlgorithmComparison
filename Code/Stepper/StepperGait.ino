@@ -13,7 +13,8 @@
   - FULL4WIRE is 1.8deg accuracy -> 2048 steps/rev
 
 */
-#include <AccelStepper.h>
+#include "AccelStepper.h"
+#include "Wire.h"
 
 AccelStepper knee_stepper(AccelStepper::FULL4WIRE, 8, 10, 9, 11); // 8 - 11
 AccelStepper hip_stepper(AccelStepper::FULL4WIRE, 0, 2, 1, 3); // 0 - 3
@@ -24,40 +25,51 @@ const int strides = 100;
 float knee_angle;
 
 void setup() {
-  hip_stepper.setMaxSpeed(500.0);
-  knee_stepper.setMaxSpeed(500.0);
-  trigger_stepper.setMaxSpeed(1000.0);
+	Wire.begin(9);
+	// Angle requested from 3.6
+	//Wire.onRequest(sendAngle);
+	
+	hip_stepper.setMaxSpeed(500.0);
+	knee_stepper.setMaxSpeed(500.0);
+	trigger_stepper.setMaxSpeed(1000.0);
 
-  hip_stepper.setAcceleration(200.0);
-  knee_stepper.setAcceleration(200.0);
-  trigger_stepper.setAcceleration(200.0);
+	hip_stepper.setAcceleration(200.0);
+	knee_stepper.setAcceleration(200.0);
+	trigger_stepper.setAcceleration(200.0);
 
-  Serial.begin(9600);
-  delay(100);
-  Serial.println(
-    "Stepper Motor Gait System"
-    "\nMimicks the full gait cycle of one leg from stance, stride, swing"
-    "\nBAC phases are tracked and recorded over Serial.\n"
-    "\nPress the start button to begin...\n"
-  );
+	Serial.begin(9600);
+	delay(100);
+	Serial.println(
+		"Stepper Motor Gait System"
+		"\nMimicks the full gait cycle of one leg from stance, stride, swing"
+		"\nBAC phases are tracked and recorded over Serial.\n"
+		"\nPress the start button to begin...\n"
+	);
   
-  pinMode(home_pin, INPUT); 
-  while(digitalRead(home_pin) == LOW);
+	pinMode(home_pin, INPUT); 
+	while(digitalRead(home_pin) == LOW);
   
-  delay(100);
-  Serial.println("Recalibration");
+	delay(100);
+	Serial.println("Recalibration");
   
-  setCalibrationPosition();
-  triggerCalibration();
+	setCalibrationPosition();
+	triggerCalibration();
 
-  Serial.println("Calibrated.\n");
-  delay(500);
+	Serial.println("Calibrated.\n");
+	delay(500);
 }
 
 void loop() {
   runTrial(); 
   Serial.println("Trial Done."); 
   while(1);
+}
+
+void sendAngle(int knee_) {
+	knee_angle = map(knee_, 0, 2038, 0, 360);
+	Wire.beginTransmission(9);
+	Wire.write(knee_angle);
+	Wire.endTransmission();
 }
 
 // Calibration "Homing" procedure
@@ -109,6 +121,8 @@ void setCalibrationPosition() {
     delay(4);
     hip_stepper.run();
     delay(4);
+
+	sendAngle(knee_stepper.currentPosition());
   }
   Serial.println("\tDone");
   delay(500);
