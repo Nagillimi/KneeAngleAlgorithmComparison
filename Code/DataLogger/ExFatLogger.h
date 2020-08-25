@@ -40,7 +40,7 @@ struct data_t {
 	float ax_2;
 	float ay_2;
 	float az_2;
-  String knee_stepper;
+  int32_t knee_stepper;
   uint32_t whitespace[2];
 };
 //-------------------------------PARAMETERS-------------------------------------
