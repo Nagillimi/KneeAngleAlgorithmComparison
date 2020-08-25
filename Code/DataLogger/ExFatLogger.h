@@ -11,6 +11,7 @@
 #ifndef ExFatLogger_h
 #define ExFatLogger_h
 #include "MYUM7SPI.h"
+#include "Wire.h"
 
 MYUM7SPI imu1(15); // cs pin 1
 MYUM7SPI imu2(20); // cs pin 2
@@ -18,12 +19,10 @@ MYUM7SPI imu2(20); // cs pin 2
 #define UM7_MOSI_PIN 11
 #define UM7_MISO_PIN 12
 #define UM7_SCK_PIN 13
+#define IMPULSE_PIN 33
 
-// Custom type to combine a float with its components
-typedef union {
-  float val;
-  byte bytes[4];
-} floatval;
+int16_t step_ = 0;
+uint8_t gait_stage_ = 0, stride_num_ = 0;
 
 // Collection of data custom for application
 struct data_t {
@@ -40,11 +39,34 @@ struct data_t {
 	float ax_2;
 	float ay_2;
 	float az_2;
-  int32_t knee_stepper;
-  uint32_t whitespace[2];
-};
-//-------------------------------PARAMETERS-------------------------------------
+  bool impulse;
+  int16_t knee_stepper;
+  float knee_angle;
+  uint8_t gait_stage;
+  uint8_t stride_num;
 
+  // data_t is now perfectly 128 Bytes
+//  uint32_t whitespace;
+};
+// Variable for keeping track of transfer #'s for rate synchronization
+uint64_t count = 0;
+
+void getI2Cdata() {
+  Wire.requestFrom(9, 4); // address, howManyBytes
+//  step_ = (int32_t)(((Wire.read() << 24) | Wire.read() << 16) | Wire.read() << 8) | Wire.read();
+  step_ = (int16_t)(Wire.read() << 8) | Wire.read();
+  gait_stage_ = Wire.read();
+  stride_num_ = Wire.read();
+}
+
+float calcKneeAngle() {
+  // y = mx + b... lol
+  if(!step_)
+    return -1;
+  float angle = (360.0/2038.0) * step_ - 90.0;
+  return angle;
+}
+//-------------------------------PARAMETERS-------------------------------------
 // You may modify the log file name.  
 // Digits before the dot are file versions, don't edit them.
 char binName[] = "DataLogger00.bin";
