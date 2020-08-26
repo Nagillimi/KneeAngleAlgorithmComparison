@@ -16,23 +16,21 @@
 #include "AccelStepper.h"
 #include "Wire.h"
 
-// HALF4WIRE -> 4076
-// FULL4WIRE -> 2038
-#define STEPS_PER_REV 2038
+#define DELAY_SPEED 3
 
 // Custom stepper positions, all reference the CENTER_POS.
 // 2038/4 = 509.5
 // 2038/2 = 1019
 // Note, no decimal though!!
 #define CALIBRATION_POS 1019
-#define CENTER_POS 509
+#define CENTER_POS 480 //509
 
 AccelStepper knee_stepper(AccelStepper::FULL4WIRE, 8, 10, 9, 11); // 8 - 11
 AccelStepper hip_stepper(AccelStepper::FULL4WIRE, 0, 2, 1, 3); // 0 - 3
 AccelStepper trigger_stepper(AccelStepper::FULL4WIRE, 4, 6, 5, 7); // 4 - 7
 
 int home_pin = 13;
-const int strides = 100;
+const int strides = 10;
 long knee_ = 0;
 uint8_t gait_stage = 0, stride_num = 0;
 
@@ -68,7 +66,7 @@ void setup() {
   Serial.println("Recalibration");
   
   setCalibrationPosition();
-  triggerCalibration();
+//  triggerCalibration();
 
   Serial.println("Calibrated.\n");
   delay(500);
@@ -106,7 +104,7 @@ void requestEvent() {
 void setCalibrationPosition() {
   // Set hip joint parameters for calibration position
   Serial.print("Moving thigh...");
-  hip_stepper.setSpeed(100);
+  hip_stepper.setSpeed(1000);
   hip_stepper.moveTo(1024);
   while(hip_stepper.currentPosition() != 1024) {
     hip_stepper.run();
@@ -117,7 +115,7 @@ void setCalibrationPosition() {
 
   // Set knee joint parameters for calibration position
   Serial.print("Moving shank..."); 
-  knee_stepper.setSpeed(100);
+  knee_stepper.setSpeed(1000);
   knee_stepper.moveTo(1024);
   while(knee_stepper.currentPosition() != 1024) {
     knee_stepper.run();
@@ -128,17 +126,17 @@ void setCalibrationPosition() {
   // Resest current hip and knee positions as zero
   knee_stepper.setCurrentPosition(CALIBRATION_POS);
   knee_stepper.setMaxSpeed(1000.0);
-  knee_stepper.setAcceleration(200.0);
+  knee_stepper.setAcceleration(400.0);
   hip_stepper.setCurrentPosition(CALIBRATION_POS);
   hip_stepper.setMaxSpeed(1000.0);
-  hip_stepper.setAcceleration(200.0);
+  hip_stepper.setAcceleration(400.0);
   delay(500);
 
   // Move to 0
   Serial.print("Resetting both to 0...");
-  knee_stepper.setSpeed(100);
+  knee_stepper.setSpeed(200);
   knee_stepper.moveTo(CENTER_POS);
-  hip_stepper.setSpeed(100);
+  hip_stepper.setSpeed(200);
   hip_stepper.moveTo(CENTER_POS);
   while(knee_stepper.currentPosition() != CENTER_POS && hip_stepper.currentPosition() != CENTER_POS) {
     knee_stepper.run();
@@ -190,127 +188,55 @@ void triggerCalibration() {
 }
 
 // Cycles through Gait Phases BAC 1 to BAC 8
+// Note: For proper multi-stepper function, align delta hip & knee step values together
 void runTrial() {
+  int impulseEvent = 1;
+  
+  // First leg lift
+  hip_stepper.setSpeed(1000);
+  hip_stepper.moveTo(CENTER_POS-250);
+  knee_stepper.setSpeed(1000);
+  knee_stepper.moveTo(CENTER_POS+125); 
+  while(hip_stepper.currentPosition() != CENTER_POS-250) {
+    if(hip_stepper.currentPosition() <= CENTER_POS-125 && knee_stepper.currentPosition() != CENTER_POS+125) {
+      knee_stepper.run();
+      delay(DELAY_SPEED);
+    }
+    hip_stepper.run();
+    delay(DELAY_SPEED);
+  }
+
+  // Start strides
   for(int i = 1; i <= strides; i++) {
     stride_num = i;
-    
-    Serial.print("Step "); Serial.print(i);
-    // BAC 1
-    Serial.print(": BAC 1");
-    gait_stage = 1;
+
+    // Movement from BAC 1 - 4
     hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(CENTER_POS-150);
-    while(hip_stepper.currentPosition() != CENTER_POS-150) {
-      hip_stepper.run();
-      delay(5);
-    }
-  
-    // BAC 2
-    Serial.print("..2");
-    gait_stage = 2;
+    hip_stepper.moveTo(CENTER_POS+250); // from -250
     knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(CENTER_POS+150); 
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(CENTER_POS-300);
-    while(knee_stepper.currentPosition() != CENTER_POS+150 && hip_stepper.currentPosition() != CENTER_POS-300) {
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(5);
+    knee_stepper.moveTo(CENTER_POS); // from +125
+    while(hip_stepper.currentPosition() != CENTER_POS+250) {
+      if(hip_stepper.currentPosition() <= CENTER_POS && knee_stepper.currentPosition() != CENTER_POS) {
+        knee_stepper.run();
+        delay(DELAY_SPEED);
+      }
       hip_stepper.run();
-      delay(5);
-    }
-  
-    // BAC 3
-    Serial.print("..3");
-    gait_stage = 3;
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(CENTER_POS);
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(CENTER_POS);
-    while(knee_stepper.currentPosition() != CENTER_POS && hip_stepper.currentPosition() != CENTER_POS) {
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(5);
-      hip_stepper.run();
-      delay(5);
-    }
-  
-    // BAC 4
-    Serial.print("..4");
-    gait_stage = 4;
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(CENTER_POS+150);
-    while(hip_stepper.currentPosition() != CENTER_POS+150) {
-      hip_stepper.run();
-      delay(5);
-    }
-  
-    // BAC 5
-    Serial.print("..5");
-    gait_stage = 5;
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(CENTER_POS+150);
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(CENTER_POS+200);
-    while(knee_stepper.currentPosition() != CENTER_POS+150 && hip_stepper.currentPosition() != CENTER_POS+200) {
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(5);
-      hip_stepper.run();
-      delay(5);
-    }
-  
-    // BAC 6
-    Serial.print("..6");
-    gait_stage = 6;
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(CENTER_POS+300);
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(CENTER_POS+50);
-    while(knee_stepper.currentPosition() != CENTER_POS+300 && hip_stepper.currentPosition() != CENTER_POS+50) {
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(5);
-      hip_stepper.run();
-      delay(5);
-    }
-  
-    // BAC 7
-    Serial.print("..7");
-    gait_stage = 7;
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(CENTER_POS+350);
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(CENTER_POS-150);
-    while(knee_stepper.currentPosition() != CENTER_POS+350 && hip_stepper.currentPosition() != CENTER_POS-150) {
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(5);
-      hip_stepper.run();
-      delay(5);
+      delay(DELAY_SPEED);
     }
 
-    // Reset position before BAC 8, the reset
-    knee_stepper.setCurrentPosition(CENTER_POS+350);
-    knee_stepper.setMaxSpeed(1000.0);
-    knee_stepper.setAcceleration(200.0);
-    hip_stepper.setCurrentPosition(CENTER_POS-150);
-    hip_stepper.setMaxSpeed(1000.0);
-    hip_stepper.setAcceleration(200.0);
-  
-    // BAC 8
-    Serial.println("..8");
-    gait_stage = 8;
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(CENTER_POS);
     hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(CENTER_POS);
-    while(knee_stepper.currentPosition() != CENTER_POS && hip_stepper.currentPosition() != CENTER_POS) {
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(5);
+    hip_stepper.moveTo(CENTER_POS-250); // from +250
+    knee_stepper.setSpeed(1000);
+    knee_stepper.moveTo(CENTER_POS+250); // from 0
+    while(hip_stepper.currentPosition() != CENTER_POS-250) { // 500 steps
       hip_stepper.run();
-      delay(5);
+      delay(DELAY_SPEED);
+      knee_stepper.run();
+      delay(DELAY_SPEED);
+      if(knee_stepper.distanceToGo() == 0) {
+        knee_stepper.moveTo(CENTER_POS); // from +250
+      }
+      
     }
   }
     
