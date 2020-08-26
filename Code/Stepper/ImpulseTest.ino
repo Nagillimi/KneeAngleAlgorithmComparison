@@ -1,6 +1,6 @@
 #include <AccelStepper.h>
 
-AccelStepper trigger_stepper(AccelStepper::FULL4WIRE, 0, 2, 1, 3); // 0 - 3
+AccelStepper trigger_stepper(AccelStepper::FULL4WIRE, 4, 6, 5, 7); // 0 - 3
 
 void setup() {
   pinMode(23, INPUT);
@@ -17,8 +17,8 @@ void loop() {}
 void triggerTest() {
   while(true) {
     trigger_stepper.setSpeed(1000);
-    trigger_stepper.moveTo(1000000);
-    while(trigger_stepper.currentPosition() != 1000000) {
+    trigger_stepper.moveTo(10000000);
+    while(trigger_stepper.currentPosition() != 10000000) {
       trigger_stepper.run();
       delay(3);
     }
