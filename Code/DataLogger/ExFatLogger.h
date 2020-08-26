@@ -26,19 +26,19 @@ uint8_t gait_stage_ = 0, stride_num_ = 0;
 
 // Collection of data custom for application
 struct data_t {
-	uint32_t t;
-	float gx_1;
-	float gy_1;
-	float gz_1;
-	float ax_1;
-	float ay_1;
-	float az_1;
-	float gx_2;
-	float gy_2;
-	float gz_2;
-	float ax_2;
-	float ay_2;
-	float az_2;
+  uint32_t t;
+  float gx_1;
+  float gy_1;
+  float gz_1;
+  float ax_1;
+  float ay_1;
+  float az_1;
+  float gx_2;
+  float gy_2;
+  float gz_2;
+  float ax_2;
+  float ay_2;
+  float az_2;
   bool impulse;
   int16_t knee_stepper;
   float knee_angle;
@@ -97,7 +97,7 @@ typedef FsFile file_t;
 // Try 250 with Teensy 3.6, Due, or STM32.
 // Try 2000 with AVR boards, = 500Hz
 // Try 4000 with SAMD Zero boards, = 250Hz
-const uint16_t LOG_INTERVAL_USEC = 4000;
+const uint16_t LOG_INTERVAL_USEC = 3000;
 // Use to compare timestamps for missed packets
 const uint16_t MAX_INTERVAL_USEC = 6000;
 //------------------------------------------------------------------------------
