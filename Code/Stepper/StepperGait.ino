@@ -5,7 +5,7 @@
   ------------------------------------------------------------------------------------------------------------
   |    BAC 1    |     BAC 2     |    BAC 3    |    BAC 4    |   BAC 5   |   BAC 6   |   BAC 7   |   BAC 8    |
   | 1st Contact | Load Response | Mid  Stance | Term Stance | Pre Swing | 1st Swing | Mid Swing | Term Swing |
-  ------------------------------------------------------------------------------------------------------------
+  ------HS-------------------------------------------------------TO-------------------------------------------
 
   Notes:
   - pin assignment for Int1, Int2, Int3, Int4 is 1,3,2,4 in order on MCU.
@@ -109,7 +109,7 @@ void setCalibrationPosition() {
   hip_stepper.moveTo(1024);
   while(hip_stepper.currentPosition() != 1024) {
     hip_stepper.run();
-    delay(4);
+    delay(DELAY_SPEED);
   }
   Serial.println("\t\tDone");
   delay(500);
@@ -120,7 +120,7 @@ void setCalibrationPosition() {
   knee_stepper.moveTo(1024);
   while(knee_stepper.currentPosition() != 1024) {
     knee_stepper.run();
-    delay(4);
+    delay(DELAY_SPEED);
   }
   Serial.println("\t\tDone");
 
@@ -139,13 +139,13 @@ void setCalibrationPosition() {
   hip_stepper.moveTo(HIP_CENTER_POS);
   while(hip_stepper.currentPosition() != HIP_CENTER_POS) {
     hip_stepper.run();
-    delay(4);
+    delay(DELAY_SPEED);
   }
   knee_stepper.setSpeed(1000);
   knee_stepper.moveTo(KNEE_CENTER_POS);
   while(knee_stepper.currentPosition() != KNEE_CENTER_POS) {
     knee_stepper.run();
-    delay(4);
+    delay(DELAY_SPEED);
   }
   Serial.println("\tDone");
   delay(500);
@@ -158,7 +158,7 @@ void impulseCalibration() {
   trigger_stepper.moveTo(IMPULSE_CAL_POS);
   while(trigger_stepper.currentPosition() != IMPULSE_CAL_POS) {
     trigger_stepper.run();
-    delay(3);
+    delay(DELAY_SPEED);
   }
   trigger_stepper.setCurrentPosition(0);
   trigger_stepper.setMaxSpeed(1000.0);
@@ -184,7 +184,7 @@ void impulseReset() {
   trigger_stepper.moveTo(IMPULSE_RESET_POS);
   while(trigger_stepper.currentPosition() != IMPULSE_RESET_POS) {
     trigger_stepper.run();
-    delay(3);
+    delay(DELAY_SPEED);
   }
   trigger_stepper.setCurrentPosition(0);
   trigger_stepper.setMaxSpeed(1000.0);
@@ -198,7 +198,7 @@ void impulseLoad() {
   trigger_stepper.moveTo(IMPULSE_LOAD_POS);
   while(trigger_stepper.currentPosition() != IMPULSE_LOAD_POS) {
     trigger_stepper.run();
-    delay(3);
+    delay(DELAY_SPEED);
   }
 }
 
