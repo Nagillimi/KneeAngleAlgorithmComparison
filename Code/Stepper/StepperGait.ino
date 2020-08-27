@@ -30,7 +30,7 @@ AccelStepper hip_stepper(AccelStepper::FULL4WIRE, 0, 2, 1, 3); // 0 - 3
 AccelStepper trigger_stepper(AccelStepper::FULL4WIRE, 4, 6, 5, 7); // 4 - 7
 
 int home_pin = 13;
-const int strides = 3;
+const int strides = 5;
 long knee_ = 0;
 uint8_t gait_stage = 0, stride_num = 0;
 
@@ -66,7 +66,7 @@ void setup() {
   Serial.println("Recalibration");
   
   setCalibrationPosition();
-  triggerCalibration();
+//  triggerCalibration();
 
   Serial.println("Calibrated.\n");
   delay(500);
@@ -168,8 +168,8 @@ void triggerCalibration() {
   
   Serial.print("Loading Impulse...");
   trigger_stepper.setSpeed(1000);
-  trigger_stepper.moveTo(2100);
-  while(trigger_stepper.currentPosition() != 2100) {
+  trigger_stepper.moveTo(2110);
+  while(trigger_stepper.currentPosition() != 2110) {
     trigger_stepper.run();
     delay(3);
   }
@@ -178,8 +178,8 @@ void triggerCalibration() {
 
   Serial.print("Firing Impulse...");
   trigger_stepper.setSpeed(1000);
-  trigger_stepper.moveTo(2130);
-  while(trigger_stepper.currentPosition() != 2130) {
+  trigger_stepper.moveTo(2140);
+  while(trigger_stepper.currentPosition() != 2140) {
     trigger_stepper.run();
     delay(3);
   }
@@ -195,15 +195,8 @@ void runTrial() {
   
   // First leg lift with bent knee
   hip_stepper.setSpeed(1000);
-  hip_stepper.moveTo(CENTER_POS-250);
-  knee_stepper.setSpeed(1000);
-  knee_stepper.moveTo(CENTER_POS+125); 
+  hip_stepper.moveTo(CENTER_POS-250); 
   while(hip_stepper.currentPosition() != CENTER_POS-250) {
-    if(hip_stepper.currentPosition() <= CENTER_POS-125 && knee_stepper.currentPosition() != CENTER_POS+125) {
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(DELAY_SPEED);
-    }
     hip_stepper.run();
     delay(DELAY_SPEED);
   }
@@ -218,16 +211,16 @@ void runTrial() {
     hip_stepper.setSpeed(1000);
     hip_stepper.moveTo(CENTER_POS+250); // from -250
     knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(CENTER_POS); // from +125
+    knee_stepper.moveTo(CENTER_POS+125); // from 0
     while(hip_stepper.currentPosition() != CENTER_POS+250) {
-      if(hip_stepper.currentPosition() <= CENTER_POS && knee_stepper.currentPosition() != CENTER_POS) {
-        gait_stage = 2;
+      // The first half, 250 ticks
+//      if(hip_stepper.currentPosition() <= CENTER_POS) {
         knee_stepper.run();
         knee_ = knee_stepper.currentPosition();
         delay(DELAY_SPEED);
-        if(knee_stepper.distanceToGo() == 0)
-          gait_stage = 3;
-      }
+//      }
+      if(knee_stepper.distanceToGo() == 0)
+        knee_stepper.moveTo(CENTER_POS);
       hip_stepper.run();
       delay(DELAY_SPEED);
       if(hip_stepper.distanceToGo() == 100)
