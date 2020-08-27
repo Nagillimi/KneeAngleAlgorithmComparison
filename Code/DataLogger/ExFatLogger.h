@@ -52,7 +52,6 @@ uint64_t count = 0;
 
 void getI2Cdata() {
   Wire.requestFrom(9, 4); // address, howManyBytes
-//  step_ = (int32_t)(((Wire.read() << 24) | Wire.read() << 16) | Wire.read() << 8) | Wire.read();
   step_ = (int16_t)(Wire.read() << 8) | Wire.read();
   gait_stage_ = Wire.read();
   impulse_hit_ = Wire.read();
