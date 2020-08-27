@@ -23,9 +23,9 @@
 #define HIP_CENTER_POS 480
 #define KNEE_CENTER_POS 450
 #define IMPULSE_CAL_POS -2200
-#define IMPULSE_RESET_POS 2000
-#define IMPULSE_LOAD_POS 2100
-#define IMPULSE_FIRE_POS 2115
+#define IMPULSE_RESET_POS 1500
+#define IMPULSE_LOAD_POS 2115 // 2100 with 1 elastic
+#define IMPULSE_FIRE_POS 2140 // 2115 with 1 elastic
 
 AccelStepper knee_stepper(AccelStepper::FULL4WIRE, 8, 10, 9, 11); // 8 - 11
 AccelStepper hip_stepper(AccelStepper::FULL4WIRE, 0, 2, 1, 3); // 0 - 3
@@ -226,6 +226,9 @@ void impulseFire() {
 // Cycles through Gait Phases BAC 1 to BAC 8
 // Note: For proper multi-stepper function, align delta hip & knee step values together
 void runTrial() {
+  // Lift impulse arm up for less friction
+  impulseReset();
+  impulseLoad();
   // First leg lift to BAC 1
   hip_stepper.setSpeed(1000);
   hip_stepper.moveTo(HIP_CENTER_POS-250); 
@@ -281,13 +284,10 @@ void runTrial() {
       delay(DELAY_SPEED);
     }
   }
+  impulseFire();
   //---------------------------------------------------------------------------------------------------
   // Start strides with impulse interruptions
-  for(int impulseEvent = 1; impulseEvent <= 8; impulseEvent++) {
-    // Reset the impulse trigger every stride
-    impulseReset();
-    impulseLoad();
-    
+  for(int impulseEvent = 1; impulseEvent <= 8; impulseEvent++) {   
     // Movement from BAC 1 - 4
     gait_stage = 1;
     hip_stepper.setSpeed(1000);
@@ -355,6 +355,9 @@ void runTrial() {
       if(gait_stage == 8 && impulseEvent == 8)
         impulseFire();
     }
+    // Reset the impulse trigger after every stride 
+    impulseReset();
+    impulseLoad();
   }
 
   //---------------------------------------------------------------------------------------------------
@@ -375,4 +378,7 @@ void runTrial() {
     knee_ = knee_stepper.currentPosition();
     delay(DELAY_SPEED);
   } 
+  // Load impulse for easy next use
+  impulseReset();
+  impulseLoad();
 }
