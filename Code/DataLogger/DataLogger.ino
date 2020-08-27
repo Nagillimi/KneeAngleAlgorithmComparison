@@ -28,7 +28,6 @@
 // Replace logRecord(), printRecord(), and ExFatLogger.h for your sensors.
 void logRecord(data_t* data) {
   data->t = (micros() - t0);
-  data->impulse = digitalRead(IMPULSE_PIN);
   imu1.get_bens_data();
   data->gx_1 = imu1.gyro_x;
   data->gy_1 = imu1.gyro_y;
@@ -47,7 +46,7 @@ void logRecord(data_t* data) {
   data->knee_stepper = step_;
   data->knee_angle = calcKneeAngle();
   data->gait_stage = gait_stage_;
-  data->stride_num = stride_num_;
+  data->impulse_hit = impulse_hit_;
 }
 //------------------------------------------------------------------------------
 void printRecord(Print* pr, data_t* data, bool test_) {
@@ -69,7 +68,6 @@ void printRecord(Print* pr, data_t* data, bool test_) {
     pr->print(F("TRANSFER #"));
     pr->print(F(",TIME"));
     pr->print(F(",TIME DELTA"));
-    pr->print(F(",IMPULSE STATE"));
     pr->print(F(",G1X"));
     pr->print(F(",G1Y"));
     pr->print(F(",G1Z"));
@@ -85,7 +83,7 @@ void printRecord(Print* pr, data_t* data, bool test_) {
     pr->print(F(",KNEE STEPPER"));
     pr->print(F(",ABS KNEE ANGLE"));
     pr->print(F(",GAIT STAGE"));
-    pr->print(F(",STRIDE NUM"));
+    pr->print(F(",IMPULSE HIT"));
     pr->println();
     nr = 0;
     return;
@@ -101,7 +99,6 @@ void printRecord(Print* pr, data_t* data, bool test_) {
   pr->print(nr++);
   pr->write(','); pr->print(data->t);
   pr->write(','); pr->print(data->t - delta);
-  pr->write(','); pr->print(data->impulse);
   pr->write(','); pr->print(data->gx_1);
   pr->write(','); pr->print(data->gy_1);
   pr->write(','); pr->print(data->gz_1);
@@ -117,7 +114,7 @@ void printRecord(Print* pr, data_t* data, bool test_) {
   pr->write(','); pr->print(data->knee_stepper);
   pr->write(','); pr->print(data->knee_angle);
   pr->write(','); pr->print(data->gait_stage);
-  pr->write(','); pr->print(data->stride_num);
+  pr->write(','); pr->print(data->impulse_hit);
   pr->println();
 
   // Reset delta to hold time for the next packet
