@@ -22,7 +22,7 @@ MYUM7SPI imu2(20); // cs pin 2
 #define IMPULSE_PIN 33
 
 int16_t step_ = 0;
-uint8_t gait_stage_ = 0, stride_num_ = 0;
+uint8_t gait_stage_ = 0, impulse_hit_ = 0;
 
 // Collection of data custom for application
 struct data_t {
@@ -39,11 +39,10 @@ struct data_t {
   float ax_2;
   float ay_2;
   float az_2;
-  bool impulse;
   int16_t knee_stepper;
   float knee_angle;
   uint8_t gait_stage;
-  uint8_t stride_num;
+  uint8_t impulse_hit;
 
   // data_t is now perfectly 128 Bytes
 //  uint32_t whitespace;
@@ -56,7 +55,7 @@ void getI2Cdata() {
 //  step_ = (int32_t)(((Wire.read() << 24) | Wire.read() << 16) | Wire.read() << 8) | Wire.read();
   step_ = (int16_t)(Wire.read() << 8) | Wire.read();
   gait_stage_ = Wire.read();
-  stride_num_ = Wire.read();
+  impulse_hit_ = Wire.read();
 }
 
 float calcKneeAngle() {
