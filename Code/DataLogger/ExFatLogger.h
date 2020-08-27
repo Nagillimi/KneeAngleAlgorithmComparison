@@ -97,7 +97,7 @@ typedef FsFile file_t;
 // Try 250 with Teensy 3.6, Due, or STM32.
 // Try 2000 with AVR boards, = 500Hz
 // Try 4000 with SAMD Zero boards, = 250Hz
-const uint16_t LOG_INTERVAL_USEC = 3000;
+const uint16_t LOG_INTERVAL_USEC = 4000;
 // Use to compare timestamps for missed packets
 const uint16_t MAX_INTERVAL_USEC = 6000;
 //------------------------------------------------------------------------------
