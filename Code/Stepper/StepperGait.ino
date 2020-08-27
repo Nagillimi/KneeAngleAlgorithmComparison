@@ -16,9 +16,10 @@
 #include "AccelStepper.h"
 #include "Wire.h"
 
-#define DELAY_SPEED 4
+// Number of gait cycles with impulse interruption
+#define GAIT_IMPULSE_CYCLES 5
 
-// Custom stepper positions, all reference the CENTER_POS. No decimals!
+// Custom stepper parameters, all reference the CENTER_POS. No decimals!
 #define CALIBRATION_POS 1019
 #define HIP_CENTER_POS 480
 #define KNEE_CENTER_POS 450
@@ -26,6 +27,7 @@
 #define IMPULSE_RESET_POS 1500
 #define IMPULSE_LOAD_POS 2115 // 2100 with 1 elastic
 #define IMPULSE_FIRE_POS 2140 // 2115 with 1 elastic
+#define DELAY_SPEED 4
 
 AccelStepper knee_stepper(AccelStepper::FULL4WIRE, 8, 10, 9, 11); // 8 - 11
 AccelStepper hip_stepper(AccelStepper::FULL4WIRE, 0, 2, 1, 3); // 0 - 3
@@ -203,6 +205,7 @@ void impulseLoad() {
 }
 
 // Fires the trigger
+// Delays are the DELAY_SPEED/3 in usec to sync up perfectly
 void impulseFire() {
   trigger_stepper.setSpeed(1000);
   trigger_stepper.moveTo(IMPULSE_FIRE_POS);
@@ -214,12 +217,12 @@ void impulseFire() {
       impulse_hit = 0;
     // Use DELAY_SPEED-1 to make it super close to the movement already 8~9msec
     trigger_stepper.run();
-    delay(DELAY_SPEED-1);
+    delayMicroseconds(2667);
     // run other steppers to keep it synchronous
     hip_stepper.run();
-    delay(DELAY_SPEED-1);
+    delayMicroseconds(2667);
     knee_stepper.run();
-    delay(DELAY_SPEED-1);
+    delayMicroseconds(2667);
   }
 }
 
@@ -273,66 +276,6 @@ void runTrial() {
       }
       if(hip_stepper.currentPosition() == HIP_CENTER_POS)
         gait_stage = 6;
-      if(hip_stepper.distanceToGo() == 200)
-        gait_stage = 7;
-      if(hip_stepper.distanceToGo() == 75)
-        gait_stage = 8;
-      hip_stepper.run();
-      delay(DELAY_SPEED);
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(DELAY_SPEED);
-    }
-  }
-  //---------------------------------------------------------------------------------------------------
-  // Start strides with impulse interruptions
-  for(int impulseEvent = 1; impulseEvent <= 8; impulseEvent++) {   
-    // Movement from BAC 1 - 4
-    gait_stage = 1;
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(HIP_CENTER_POS+250); // from -250
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(KNEE_CENTER_POS+125); // from 0
-    while(hip_stepper.currentPosition() != HIP_CENTER_POS+250) {
-      if(knee_stepper.distanceToGo() == 0) {
-        gait_stage = 2;
-        knee_stepper.moveTo(KNEE_CENTER_POS);
-      }
-      if(hip_stepper.currentPosition() == HIP_CENTER_POS)
-          gait_stage = 3;
-      if(hip_stepper.distanceToGo() == 100)
-          gait_stage = 4;
-          
-      hip_stepper.run();
-      delay(DELAY_SPEED);
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(DELAY_SPEED);
-      
-
-      // Impulse detection fires.
-      // Fires one step into the specified gait stage
-      if(gait_stage == 1 && impulseEvent == 1)
-        impulseFire();
-      else if(gait_stage == 2 && impulseEvent == 2)
-        impulseFire();
-      else if(gait_stage == 3 && impulseEvent == 3)
-        impulseFire();
-      else if(gait_stage == 4 && impulseEvent == 4)
-        impulseFire();
-    }
-
-    // Movement from BAC 5 - 8
-    gait_stage = 5;
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(HIP_CENTER_POS-250); // from +250
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(KNEE_CENTER_POS+250); // from 0
-    while(hip_stepper.currentPosition() != HIP_CENTER_POS-250) { // 500 steps
-      if(knee_stepper.distanceToGo() == 0)
-        knee_stepper.moveTo(KNEE_CENTER_POS); // from +250
-      if(hip_stepper.currentPosition() == HIP_CENTER_POS)
-        gait_stage = 6;
       if(hip_stepper.currentPosition() == HIP_CENTER_POS-50)
         gait_stage = 7;
       if(hip_stepper.currentPosition() == HIP_CENTER_POS-175)
@@ -342,21 +285,84 @@ void runTrial() {
       knee_stepper.run();
       knee_ = knee_stepper.currentPosition();
       delay(DELAY_SPEED);
-
-      // Impulse detection fires.
-      // Fires one step into the specified gait stage
-      if(gait_stage == 5 && impulseEvent == 5)
-        impulseFire();
-      else if(gait_stage == 6 && impulseEvent == 6)
-        impulseFire();
-      else if(gait_stage == 7 && impulseEvent == 7)
-        impulseFire();
-      else if(gait_stage == 8 && impulseEvent == 8)
-        impulseFire();
     }
-    // Reset the impulse trigger after every stride 
-    impulseReset();
-    impulseLoad();
+  }
+  //---------------------------------------------------------------------------------------------------
+  // Start strides with impulse interruptions.
+  // Could repeat this section with another loop
+  for(int i = 0; i < GAIT_IMPULSE_CYCLES; i++) {
+    for(int impulseEvent = 1; impulseEvent <= 8; impulseEvent++) {   
+      // Movement from BAC 1 - 4
+      gait_stage = 1;
+      hip_stepper.setSpeed(1000);
+      hip_stepper.moveTo(HIP_CENTER_POS+250); // from -250
+      knee_stepper.setSpeed(1000);
+      knee_stepper.moveTo(KNEE_CENTER_POS+125); // from 0
+      while(hip_stepper.currentPosition() != HIP_CENTER_POS+250) {
+        if(knee_stepper.distanceToGo() == 0) {
+          gait_stage = 2;
+          knee_stepper.moveTo(KNEE_CENTER_POS);
+        }
+        if(hip_stepper.currentPosition() == HIP_CENTER_POS)
+            gait_stage = 3;
+        if(hip_stepper.distanceToGo() == 100)
+            gait_stage = 4;
+            
+        hip_stepper.run();
+        delay(DELAY_SPEED);
+        knee_stepper.run();
+        knee_ = knee_stepper.currentPosition();
+        delay(DELAY_SPEED);
+        
+  
+        // Impulse detection fires.
+        // Fires one step into the specified gait stage
+        if(gait_stage == 1 && impulseEvent == 1)
+          impulseFire();
+        else if(gait_stage == 2 && impulseEvent == 2)
+          impulseFire();
+        else if(gait_stage == 3 && impulseEvent == 3)
+          impulseFire();
+        else if(gait_stage == 4 && impulseEvent == 4)
+          impulseFire();
+      }
+  
+      // Movement from BAC 5 - 8
+      gait_stage = 5;
+      hip_stepper.setSpeed(1000);
+      hip_stepper.moveTo(HIP_CENTER_POS-250); // from +250
+      knee_stepper.setSpeed(1000);
+      knee_stepper.moveTo(KNEE_CENTER_POS+250); // from 0
+      while(hip_stepper.currentPosition() != HIP_CENTER_POS-250) { // 500 steps
+        if(knee_stepper.distanceToGo() == 0)
+          knee_stepper.moveTo(KNEE_CENTER_POS); // from +250
+        if(hip_stepper.currentPosition() == HIP_CENTER_POS)
+          gait_stage = 6;
+        if(hip_stepper.currentPosition() == HIP_CENTER_POS-50)
+          gait_stage = 7;
+        if(hip_stepper.currentPosition() == HIP_CENTER_POS-175)
+          gait_stage = 8;
+        hip_stepper.run();
+        delay(DELAY_SPEED);
+        knee_stepper.run();
+        knee_ = knee_stepper.currentPosition();
+        delay(DELAY_SPEED);
+  
+        // Impulse detection fires.
+        // Fires one step into the specified gait stage
+        if(gait_stage == 5 && impulseEvent == 5)
+          impulseFire();
+        else if(gait_stage == 6 && impulseEvent == 6)
+          impulseFire();
+        else if(gait_stage == 7 && impulseEvent == 7)
+          impulseFire();
+        else if(gait_stage == 8 && impulseEvent == 8)
+          impulseFire();
+      }
+      // Reset the impulse trigger after every stride 
+      impulseReset();
+      impulseLoad();
+    }
   }
 
   //---------------------------------------------------------------------------------------------------
