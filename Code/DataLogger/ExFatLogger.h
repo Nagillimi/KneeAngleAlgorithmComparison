@@ -61,7 +61,8 @@ float calcKneeAngle() {
   // y = mx + b... lol
   if(!step_)
     return -1;
-  float angle = (360.0/2038.0) * step_ - 90.0;
+  // Zero knee angle is set to 450 in StepperGait.ino
+  float angle = (360.0/2038.0) * step_ - 450.0*(360.0/2038.0);
   return angle;
 }
 //-------------------------------PARAMETERS-------------------------------------
