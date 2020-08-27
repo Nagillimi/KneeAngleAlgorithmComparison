@@ -559,11 +559,11 @@ void setup_imus(byte rate_) {
   // Init UM7 1
   imu1.set_all_processed_rate(rate_);
   imu1.set_orientation_rate(rate_, rate_);
-  imu1.calibrate_accelerometers();
-  imu1.zero_gyros();
+//  imu1.calibrate_accelerometers();
+//  imu1.zero_gyros();
   // Init UM7 2
   imu2.set_all_processed_rate(rate_);
   imu2.set_orientation_rate(rate_, rate_);
-  imu2.calibrate_accelerometers();
-  imu2.zero_gyros();
+//  imu2.calibrate_accelerometers();
+//  imu2.zero_gyros();
 }
