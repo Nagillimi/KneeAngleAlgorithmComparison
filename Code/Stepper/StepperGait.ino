@@ -17,7 +17,7 @@
 #include "Wire.h"
 
 // Number of gait cycles with impulse interruption
-#define GAIT_IMPULSE_CYCLES 5
+#define GAIT_IMPULSE_CYCLES 3
 
 // Custom stepper parameters, all reference the CENTER_POS. No decimals!
 #define CALIBRATION_POS 1019
@@ -28,6 +28,8 @@
 #define IMPULSE_LOAD_POS 2115 // 2100 with 1 elastic
 #define IMPULSE_FIRE_POS 2140 // 2115 with 1 elastic
 #define DELAY_SPEED 4
+
+int firing_delay_usec = DELAY_SPEED * 2000 / 3;
 
 AccelStepper knee_stepper(AccelStepper::FULL4WIRE, 8, 10, 9, 11); // 8 - 11
 AccelStepper hip_stepper(AccelStepper::FULL4WIRE, 0, 2, 1, 3); // 0 - 3
@@ -217,12 +219,12 @@ void impulseFire() {
       impulse_hit = 0;
     // Use DELAY_SPEED-1 to make it super close to the movement already 8~9msec
     trigger_stepper.run();
-    delayMicroseconds(2667);
+    delayMicroseconds(firing_delay_usec);
     // run other steppers to keep it synchronous
     hip_stepper.run();
-    delayMicroseconds(2667);
+    delayMicroseconds(firing_delay_usec);
     knee_stepper.run();
-    delayMicroseconds(2667);
+    delayMicroseconds(firing_delay_usec);
   }
 }
 
