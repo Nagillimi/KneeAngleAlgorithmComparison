@@ -21,8 +21,12 @@ MYUM7SPI imu2(20); // cs pin 2
 #define UM7_SCK_PIN 13
 #define IMPULSE_PIN 33
 
-int16_t step_ = 0;
-uint8_t gait_stage_ = 0, impulse_hit_ = 0;
+int16_t hip_stepper_ = 0, knee_stepper_ = 0;
+byte gait_stage_ = 0;
+byte impulse_hit_ = 0;
+
+int numTrials = 2;
+bool startTrial = false, doneTrial = false, halt = false;
 
 // Collection of data custom for application
 struct data_t {
@@ -39,9 +43,10 @@ struct data_t {
   float ax_2;
   float ay_2;
   float az_2;
+  int16_t hip_stepper;
   int16_t knee_stepper;
   float knee_angle;
-  uint8_t gait_stage;
+  uint8_t gait_stage; // Also logs when trial is finished. ie = 10.
   uint8_t impulse_hit;
 
   // data_t is now perfectly 128 Bytes
@@ -51,24 +56,30 @@ struct data_t {
 uint64_t count = 0;
 
 void getI2Cdata() {
-  Wire.requestFrom(9, 4); // address, howManyBytes
-  step_ = (int16_t)(Wire.read() << 8) | Wire.read();
-  gait_stage_ = Wire.read();
-  impulse_hit_ = Wire.read();
+  Wire.requestFrom(9, 6); // address, howManyBytes
+  hip_stepper_ = (int16_t)(Wire.read() << 8) | Wire.read();
+  knee_stepper_ = (int16_t)(Wire.read() << 8) | Wire.read();
+  gait_stage_ = (byte)Wire.read();
+  impulse_hit_ = (byte)Wire.read();
+
+  if(gait_stage_ == 10) {
+    doneTrial = true;
+    startTrial = false;
+  }
 }
 
 float calcKneeAngle() {
   // y = mx + b... lol
-  if(!step_)
+  if(!knee_stepper_)
     return -1;
   // Zero knee angle is set to 450 in StepperGait.ino
-  float angle = (360.0/2038.0) * step_ - 450.0*(360.0/2038.0);
+  float angle = (360.0/2038.0) * knee_stepper_ - 450.0*(360.0/2038.0);
   return angle;
 }
 //-------------------------------PARAMETERS-------------------------------------
 // You may modify the log file name.  
 // Digits before the dot are file versions, don't edit them.
-char binName[] = "DataLogger00.bin";
+char binName[] = "Trial_00.bin";
 //------------------------------------------------------------------------------
 // This example was designed for exFAT but will support FAT16/FAT32.
 // Note: Uno will not support SD_FAT_TYPE = 3.
