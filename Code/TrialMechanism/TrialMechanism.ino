@@ -135,7 +135,7 @@ void setCalibrationPosition() {
   // Make it easier for the hip stepper to move since the 28BYJ-48
   // have little torque
   knee_stepper.setSpeed(1000);
-  knee_stepper.moveTo(400);
+  knee_stepper.move(400);
   while(knee_stepper.currentPosition() != 400) {
     knee_stepper.run();
     delay(DELAY_SPEED);
@@ -144,8 +144,14 @@ void setCalibrationPosition() {
   // Set hip joint parameters for calibration position
   Serial.print("Moving thigh...");
   hip_stepper.setSpeed(1000);
-  hip_stepper.moveTo(1024);
-  while(hip_stepper.currentPosition() != 1024) {
+  hip_stepper.move(1500);
+  while(hip_stepper.currentPosition() != 1500) {
+    hip_stepper.run();
+    delay(DELAY_SPEED);
+  }
+  hip_stepper.setSpeed(1000);
+  hip_stepper.move(1000);
+  while(hip_stepper.currentPosition() != 2500) {
     hip_stepper.run();
     delay(DELAY_SPEED);
   }
@@ -155,8 +161,8 @@ void setCalibrationPosition() {
   // Set knee joint parameters for calibration position
   Serial.print("Moving shank..."); 
   knee_stepper.setSpeed(1000);
-  knee_stepper.moveTo(1024);
-  while(knee_stepper.currentPosition() != 1024) {
+  knee_stepper.move(1000);
+  while(knee_stepper.currentPosition() != 1400) {
     knee_stepper.run();
     delay(DELAY_SPEED);
   }
