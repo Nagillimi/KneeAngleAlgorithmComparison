@@ -1,5 +1,5 @@
  /* Arduino example for a Teensy Low Latency Logger using DEDICATED SPI
-   and formatting the SD card as exFAT (Need a card >= 32GB)
+   and formatting the SD card as exFAT
    
    Ben Milligan, July 2020
   
@@ -43,7 +43,8 @@ void logRecord(data_t* data) {
   data->ay_2 = imu2.accel_y;
   data->az_2 = imu2.accel_z;
   getI2Cdata();
-  data->knee_stepper = step_;
+  data->hip_stepper = hip_stepper_;
+  data->knee_stepper = knee_stepper_;
   data->knee_angle = calcKneeAngle();
   data->gait_stage = gait_stage_;
   data->impulse_hit = impulse_hit_;
@@ -59,10 +60,17 @@ void printRecord(Print* pr, data_t* data, bool test_) {
     pr->print(LOG_INTERVAL_USEC);
     pr->print(F(",microseconds"));
     pr->println();
+    
     pr->print(F("TOTAL LOG TIME,"));
     pr->print(log_time);
     pr->print(F(",seconds"));
     pr->println();
+    
+    pr->print(F("HIP_CENTER_POS,"));
+    pr->println(480);
+
+    pr->print(F("KNEE_CENTER_POS,"));
+    pr->println(450);
 
     // Dataset Titles
     pr->print(F("TRANSFER #"));
@@ -80,6 +88,7 @@ void printRecord(Print* pr, data_t* data, bool test_) {
     pr->print(F(",A2X"));
     pr->print(F(",A2Y"));
     pr->print(F(",A2Z"));
+    pr->print(F(",HIP STEPPER"));
     pr->print(F(",KNEE STEPPER"));
     pr->print(F(",ABS KNEE ANGLE"));
     pr->print(F(",GAIT STAGE"));
@@ -89,36 +98,44 @@ void printRecord(Print* pr, data_t* data, bool test_) {
     return;
   }
 
-  // Test if the delta is too high. (test_) is used to track whether or
-  // not you're just testing the sensors at super low rates.
-  if (data->t - delta >= MAX_INTERVAL_USEC && !test_) {
-    pr->print(F("Missed Packet(s)\n"));
+  if(data->gait_stage == 9) {
+    startTrial = true;
   }
-  
-  // Print data packet
-  pr->print(nr++);
-  pr->write(','); pr->print(data->t);
-  pr->write(','); pr->print(data->t - delta);
-  pr->write(','); pr->print(data->gx_1);
-  pr->write(','); pr->print(data->gy_1);
-  pr->write(','); pr->print(data->gz_1);
-  pr->write(','); pr->print(data->ax_1);
-  pr->write(','); pr->print(data->ay_1);
-  pr->write(','); pr->print(data->az_1);
-  pr->write(','); pr->print(data->gx_2);
-  pr->write(','); pr->print(data->gy_2);
-  pr->write(','); pr->print(data->gz_2);
-  pr->write(','); pr->print(data->ax_2);
-  pr->write(','); pr->print(data->ay_2);
-  pr->write(','); pr->print(data->az_2);
-  pr->write(','); pr->print(data->knee_stepper);
-  pr->write(','); pr->print(data->knee_angle);
-  pr->write(','); pr->print(data->gait_stage);
-  pr->write(','); pr->print(data->impulse_hit);
-  pr->println();
 
-  // Reset delta to hold time for the next packet
-  delta = data->t;
+  // If the startTrial flag has been observed, print the data to the csv file
+  if(startTrial) {
+    // Test if the delta is too high. (test_) is used to track whether or
+    // not you're just testing the sensors at super low rates.
+    if (data->t - delta >= MAX_INTERVAL_USEC && !test_) {
+      pr->print(F("Missed Packet(s)\n"));
+    }
+    
+    // Print data packet
+    pr->print(nr++);
+    pr->write(','); pr->print(data->t);
+    pr->write(','); pr->print(data->t - delta);
+    pr->write(','); pr->print(data->gx_1);
+    pr->write(','); pr->print(data->gy_1);
+    pr->write(','); pr->print(data->gz_1);
+    pr->write(','); pr->print(data->ax_1);
+    pr->write(','); pr->print(data->ay_1);
+    pr->write(','); pr->print(data->az_1);
+    pr->write(','); pr->print(data->gx_2);
+    pr->write(','); pr->print(data->gy_2);
+    pr->write(','); pr->print(data->gz_2);
+    pr->write(','); pr->print(data->ax_2);
+    pr->write(','); pr->print(data->ay_2);
+    pr->write(','); pr->print(data->az_2);
+    pr->write(','); pr->print(data->hip_stepper);
+    pr->write(','); pr->print(data->knee_stepper);
+    pr->write(','); pr->print(data->knee_angle);
+    pr->write(','); pr->print(data->gait_stage);
+    pr->write(','); pr->print(data->impulse_hit);
+    pr->println();
+  
+    // Reset delta to hold time for the next packet
+    delta = data->t;
+  }
 }
 //==============================================================================
 //------------------------------------------------------------------------------
@@ -165,6 +182,7 @@ void binaryToCsv() {
       }
     }
     if (Serial.available()) {
+      halt = true;
       break;
     }
   }
@@ -332,7 +350,11 @@ void logData() {
         maxFifoUse = fifoCount;
       }
       fifoCount -= nw;
+      if(doneTrial) {
+        break;
+      }
       if (Serial.available()) {
+        halt = true;
         break;
       }
     }
@@ -514,6 +536,7 @@ void loop() {
   }
   Serial.println();
   Serial.println(F("type: "));
+  Serial.println(F("s - log a series of trials"));
   Serial.println(F("b - open existing bin file"));
   Serial.println(F("c - convert file to csv"));
   Serial.println(F("l - list files"));
@@ -526,7 +549,24 @@ void loop() {
   char c = tolower(Serial.read());
   Serial.println();
 
-  if (c == 'b') {
+  if (c == 's') {  
+    int i = 1;
+    while(i <= numTrials && !halt) { // Set in Parameters.h
+      doneTrial = false;
+      Serial.print(F("\nBeginning trial ")); Serial.print(i);
+      Serial.print(F("/")); Serial.println(numTrials);
+      createBinFile();
+      // Log data until the done flag is observed
+      logData();
+      if (createCsvFile()) {
+        test = false;
+        binaryToCsv();
+      }
+      i++;
+      delay(10000); // delay 10s
+    }
+    halt = false;
+  } else if (c == 'b') {
     openBinFile();
   } else if (c == 'c') {
     if (createCsvFile()) {
