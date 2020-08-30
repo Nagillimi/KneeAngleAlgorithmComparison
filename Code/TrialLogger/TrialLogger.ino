@@ -1,24 +1,23 @@
- /* Arduino example for a Teensy Low Latency Logger using DEDICATED SPI
+/* Arduino example for a Teensy Low Latency Logger using DEDICATED SPI
    and formatting the SD card as exFAT
    
-   Ben Milligan, July 2020
+   Ben Milligan, Aug 2020
   
    An implementation of the UM7's SPI mode to allow for logging of 
-   2 UM7's @ 250 Hz (will duplicate data)
-   (latency of 2000 usec)into Bill Greiman's SdFat-beta library 
+   2 UM7's @ varying rates into Bill Greiman's SdFat-beta library 
    ExFatLogger example. Thanks Bill!!
    
    Tested on:
-   - [16MHz] Arduino Uno, slight lag
    - [48MHz] Teensy LC
+   - [120MHz] Teensy 3.5, SPI only! Hardware fault in SDIO mode for both 3.5/6
    - [180MHz] Teensy 3.6, SPI only! Hardware fault in SDIO mode for both 3.5/6
    
    Notes:
    1. You need to format your SD card as exFAT before this example works,
       otherwise you can change SD_FAT_TYPE to match your SD partition.
    2. Should use the built-in bin_to_csv function since it calculates and
-      displays missed packets
- */
+      displays missed packets and knows the custom dataset sizes.
+*/
 
 #include "SdFat.h"
 #include "FreeStack.h"
@@ -321,9 +320,6 @@ void logData() {
       if (overrun > 0XFFF) {
         error("too many overruns");
       }
-      if (ERROR_LED_PIN >= 0) {
-        digitalWrite(ERROR_LED_PIN, HIGH);
-      }
     }
     // Save max jitter.
     if (delta > maxDelta) {
@@ -472,6 +468,7 @@ void testSensor() {
   serialClearInput();
   Serial.println(F("\nTesting - type any character to stop\n"));
   delay(1000);
+  // Print header over Serial
   printRecord(&Serial, nullptr, false);
   uint32_t m = micros();
   while (!Serial.available()) {
@@ -484,14 +481,7 @@ void testSensor() {
   }
 }
 //------------------------------------------------------------------------------
-void setup() {
-  if (ERROR_LED_PIN >= 0) {
-    pinMode(ERROR_LED_PIN, OUTPUT);
-    digitalWrite(ERROR_LED_PIN, HIGH);
-  }
-  // Init the impulse detector pin
-  pinMode(IMPULSE_PIN, INPUT);
-  
+void setup() {  
   // Being I2C as Master
   Wire.begin();
   Wire.setSDA(18);
@@ -531,9 +521,6 @@ void loop() {
   // Read any Serial data.
   serialClearInput();
 
-  if (ERROR_LED_PIN >= 0) {
-    digitalWrite(ERROR_LED_PIN, LOW);
-  }
   Serial.println();
   Serial.println(F("type: "));
   Serial.println(F("s - log a series of trials"));
@@ -563,7 +550,7 @@ void loop() {
         binaryToCsv();
       }
       i++;
-      delay(10000); // delay 10s
+//      delay(20000); // delay 10s
     }
     halt = false;
   } else if (c == 'b') {
