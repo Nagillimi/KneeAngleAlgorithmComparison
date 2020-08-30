@@ -537,10 +537,10 @@ void loop() {
   Serial.println();
 
   if (c == 's') {  
-    int i = 1;
-    while(i <= numTrials && !halt) { // Set in Parameters.h
+    int i = 0;
+    while(i < numTrials && !halt) { // Set in Parameters.h
       doneTrial = false;
-      Serial.print(F("\nBeginning trial ")); Serial.print(i);
+      Serial.print(F("\nBeginning trial ")); Serial.print(i+1);
       Serial.print(F("/")); Serial.println(numTrials);
       createBinFile();
       // Log data until the done flag is observed
@@ -550,7 +550,6 @@ void loop() {
         binaryToCsv();
       }
       i++;
-//      delay(20000); // delay 10s
     }
     halt = false;
   } else if (c == 'b') {
