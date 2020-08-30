@@ -19,26 +19,26 @@
 // Number of gait cycles with impulse interruption
 #define NUM_TRIALS 2
 #define GAIT_IMPULSE_CYCLES 1
-#define BETWEEN_TRIAL_DELAY 30000 // 30s
 
 // Custom stepper parameters, all reference the CENTER_POS. No decimals!
 #define CALIBRATION_POS 1019
 #define HIP_CENTER_POS 480
 #define KNEE_CENTER_POS 450
-#define IMPULSE_CAL_POS -2200
+#define IMPULSE_CAL_POS -500
 #define IMPULSE_RESET_POS 1500
 #define IMPULSE_LOAD_POS 2115 // 2100 with 1 elastic
 #define IMPULSE_FIRE_POS 2140 // 2115 with 1 elastic
 #define DELAY_SPEED 4
 
-int firing_delay_usec = DELAY_SPEED * 2000 / 3;
+int firing_delay_usec = 2667; // DELAY_SPEED * 2000 / 3;
 
 AccelStepper knee_stepper(AccelStepper::FULL4WIRE, 8, 10, 9, 11); // 8 - 11
 AccelStepper hip_stepper(AccelStepper::FULL4WIRE, 0, 2, 1, 3); // 0 - 3
 AccelStepper trigger_stepper(AccelStepper::FULL4WIRE, 4, 6, 5, 7); // 4 - 7
 
-int home_pin = 13, numTrials = 50;
+int led_pin = 22, home_pin = 13, numTrials = 50;
 const int init_strides = 5;
+uint32_t start_of_cal = 0, start_of_trial = 0;
 long hip_ = 0, knee_ = 0;
 // Gait stage byte is the state tracking byte between MCUs
 byte gait_stage = 0x00, impulse_hit = 0;
@@ -67,42 +67,63 @@ void setup() {
     "\nPress the start button to begin...\n"
   );
   
+  pinMode(led_pin, OUTPUT);
   pinMode(home_pin, INPUT); 
   while(digitalRead(home_pin) == LOW);
-  
+
+  digitalWrite(led_pin, HIGH);
   delay(100);
-  Serial.println("Recalibration");
-  
-  setCalibrationPosition();
-  impulseCalibration();
-  Serial.println("Calibrated.\n");
-  delay(500);
+  digitalWrite(led_pin, LOW);
+  delay(20);
+  digitalWrite(led_pin, HIGH);
+  delay(100);
+  digitalWrite(led_pin, LOW);
 }
 
 void loop() {
-  for(int i = 0; i < NUM_TRIALS; i++) {  
-    Serial.println("Running Trial...");
+  for(int i = 0; i < NUM_TRIALS; i++) {
+    start_of_cal = millis();
+    Serial.println("Recalibration");
+    setCalibrationPosition();
+    impulseCalibration();
+    Serial.println("Calibrated.");
+
+    // Signal for start of Trial
+    digitalWrite(led_pin, HIGH);
+    delay(50);
+    digitalWrite(led_pin, LOW);
+
+    Serial.print(F("Starting Trial ")); 
+    Serial.print(i+1);
+
+    start_of_trial = millis();
     
     // Sends Start flag to T3.6
     gait_stage = 0x09;
-   
-    runTrial(); 
-    Serial.println("\tTrial Done.");
-
+    runTrial();
     // Sends done flag to T3.6
     gait_stage = 0x0A; 
     delay(4); // 4000usec
     gait_stage = 0x0B;
-  
-    // delay between trials
-//    delay(BETWEEN_TRIAL_DELAY);
 
-    // Collect the number of trials set
-    i++;
-    setCalibrationPosition();
-    impulseCalibration();
+    Serial.print(". Log");
+    Serial.print("\t");
+    Serial.print((millis() - start_of_trial)/1000);
+    Serial.println(F(" seconds"));
+    Serial.print("Total System Trial Time");
+    Serial.print("\t");
+    Serial.print((millis() - start_of_cal)/1000);
+    Serial.println(F(" seconds\n"));
   }
-  while(1);
+  Serial.println(F("\nDone All Trials."));
+  while(true) {
+    gait_stage = 0x0C;
+    // signal forver
+    digitalWrite(led_pin, HIGH);
+    delay(50);
+    digitalWrite(led_pin, LOW);
+    delay(2000);
+  }
 }
 
 // Function for whenever the Master T3.6 calls the TLC over I2C
@@ -156,13 +177,12 @@ void setCalibrationPosition() {
     delay(DELAY_SPEED);
   }
   Serial.println("\t\tDone");
-  delay(500);
 
   // Set knee joint parameters for calibration position
   Serial.print("Moving shank..."); 
   knee_stepper.setSpeed(1000);
-  knee_stepper.move(1000);
-  while(knee_stepper.currentPosition() != 1400) {
+  knee_stepper.move(300);
+  while(knee_stepper.currentPosition() != 700) {
     knee_stepper.run();
     delay(DELAY_SPEED);
   }
@@ -175,7 +195,6 @@ void setCalibrationPosition() {
   hip_stepper.setCurrentPosition(CALIBRATION_POS);
   hip_stepper.setMaxSpeed(1000.0);
   hip_stepper.setAcceleration(400.0);
-  delay(500);
 
   // Move to 0
   Serial.print("Resetting both to 0...");
@@ -193,7 +212,6 @@ void setCalibrationPosition() {
     delay(DELAY_SPEED);
   }
   Serial.println("\tDone");
-  delay(500);
 }
 
 void impulseCalibration() {
@@ -203,24 +221,16 @@ void impulseCalibration() {
   trigger_stepper.moveTo(IMPULSE_CAL_POS);
   while(trigger_stepper.currentPosition() != IMPULSE_CAL_POS) {
     trigger_stepper.run();
-    delay(DELAY_SPEED);
+    delay(DELAY_SPEED*3/4);
   }
   trigger_stepper.setCurrentPosition(0);
   trigger_stepper.setMaxSpeed(1000.0);
   trigger_stepper.setAcceleration(400.0);
-  delay(500);
   Serial.println("\tDone");
-  delay(500);
 
   Serial.print("Loading Impulse...");
   impulseLoad();
   Serial.println("\tDone");
-  delay(500);
-
-  Serial.print("Firing Impulse...");
-  impulseFire();
-  Serial.println("\tDone");
-  delay(500);
 }
 
 void impulseReset() {
@@ -229,12 +239,11 @@ void impulseReset() {
   trigger_stepper.moveTo(IMPULSE_RESET_POS);
   while(trigger_stepper.currentPosition() != IMPULSE_RESET_POS) {
     trigger_stepper.run();
-    delay(DELAY_SPEED);
+    delay(DELAY_SPEED*3/4);
   }
   trigger_stepper.setCurrentPosition(0);
   trigger_stepper.setMaxSpeed(1000.0);
   trigger_stepper.setAcceleration(400.0);
-  delay(500);
 }
 
 // Resets the impulse trigger to a loaded position
@@ -243,7 +252,7 @@ void impulseLoad() {
   trigger_stepper.moveTo(IMPULSE_LOAD_POS);
   while(trigger_stepper.currentPosition() != IMPULSE_LOAD_POS) {
     trigger_stepper.run();
-    delay(DELAY_SPEED);
+    delay(DELAY_SPEED*3/4);
   }
 }
 
@@ -263,8 +272,10 @@ void impulseFire() {
     delayMicroseconds(firing_delay_usec);
     // run other steppers to keep it synchronous
     hip_stepper.run();
+    hip_ = hip_stepper.currentPosition();
     delayMicroseconds(firing_delay_usec);
     knee_stepper.run();
+    knee_ = knee_stepper.currentPosition();
     delayMicroseconds(firing_delay_usec);
   }
 }
@@ -272,10 +283,6 @@ void impulseFire() {
 // Cycles through Gait Phases BAC 1 to BAC 8
 // Note: For proper multi-stepper function, align delta hip & knee step values together
 void runTrial() {
-  // Lift impulse arm up for less friction
-  impulseReset();
-  impulseLoad();
-  
   // First leg lift to BAC 1
   hip_stepper.setSpeed(1000);
   hip_stepper.moveTo(HIP_CENTER_POS-250); 
@@ -286,53 +293,51 @@ void runTrial() {
   }
   //---------------------------------------------------------------------------------------------------
   // Start initial strides without impulse
-//  for(int i = 1; i <= init_strides; i++) {
-    // Movement from BAC 1 - 4
-    gait_stage = 0x01;
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(HIP_CENTER_POS+250); // from -250
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(KNEE_CENTER_POS+125); // from 0
-    while(hip_stepper.currentPosition() != HIP_CENTER_POS+250) {
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(DELAY_SPEED);
-      if(knee_stepper.distanceToGo() == 0) {
-        gait_stage = 0x02;
-        knee_stepper.moveTo(KNEE_CENTER_POS);
-      }
-      hip_stepper.run();
-      hip_ = hip_stepper.currentPosition();
-      delay(DELAY_SPEED);
-      if(hip_stepper.currentPosition() == HIP_CENTER_POS)
-          gait_stage = 0x03;
-      if(hip_stepper.distanceToGo() == 100)
-          gait_stage = 0x04;
-    }
-
-    // Movement from BAC 5 - 8
-    gait_stage = 0x05;
-    hip_stepper.setSpeed(1000);
-    hip_stepper.moveTo(HIP_CENTER_POS-250); // from +250
-    knee_stepper.setSpeed(1000);
-    knee_stepper.moveTo(KNEE_CENTER_POS+250); // from 0
-    while(hip_stepper.currentPosition() != HIP_CENTER_POS-250) { // 500 steps
-      if(knee_stepper.distanceToGo() == 0) {
-        knee_stepper.moveTo(KNEE_CENTER_POS); // from +250
-      }
-      if(hip_stepper.currentPosition() == HIP_CENTER_POS)
-        gait_stage = 0x06;
-      if(hip_stepper.currentPosition() == HIP_CENTER_POS-50)
-        gait_stage = 0x07;
-      if(hip_stepper.currentPosition() == HIP_CENTER_POS-175)
-        gait_stage = 0x08;
-      hip_stepper.run();
-      hip_ = hip_stepper.currentPosition();
-      delay(DELAY_SPEED);
-      knee_stepper.run();
-      knee_ = knee_stepper.currentPosition();
-      delay(DELAY_SPEED);
-    }
+  // Movement from BAC 1 - 4
+//  gait_stage = 0x01;
+//  hip_stepper.setSpeed(1000);
+//  hip_stepper.moveTo(HIP_CENTER_POS+250); // from -250
+//  knee_stepper.setSpeed(1000);
+//  knee_stepper.moveTo(KNEE_CENTER_POS+125); // from 0
+//  while(hip_stepper.currentPosition() != HIP_CENTER_POS+250) {
+//    knee_stepper.run();
+//    knee_ = knee_stepper.currentPosition();
+//    delay(DELAY_SPEED);
+//    if(knee_stepper.distanceToGo() == 0) {
+//      gait_stage = 0x02;
+//      knee_stepper.moveTo(KNEE_CENTER_POS);
+//    }
+//    hip_stepper.run();
+//    hip_ = hip_stepper.currentPosition();
+//    delay(DELAY_SPEED);
+//    if(hip_stepper.currentPosition() == HIP_CENTER_POS)
+//        gait_stage = 0x03;
+//    if(hip_stepper.distanceToGo() == 100)
+//        gait_stage = 0x04;
+//  }
+//
+//  // Movement from BAC 5 - 8
+//  gait_stage = 0x05;
+//  hip_stepper.setSpeed(1000);
+//  hip_stepper.moveTo(HIP_CENTER_POS-250); // from +250
+//  knee_stepper.setSpeed(1000);
+//  knee_stepper.moveTo(KNEE_CENTER_POS+250); // from 0
+//  while(hip_stepper.currentPosition() != HIP_CENTER_POS-250) { // 500 steps
+//    if(knee_stepper.distanceToGo() == 0) {
+//      knee_stepper.moveTo(KNEE_CENTER_POS); // from +250
+//    }
+//    if(hip_stepper.currentPosition() == HIP_CENTER_POS+100)
+//      gait_stage = 0x06;
+//    if(hip_stepper.currentPosition() == HIP_CENTER_POS-50)
+//      gait_stage = 0x07;
+//    if(hip_stepper.currentPosition() == HIP_CENTER_POS-175)
+//      gait_stage = 0x08;
+//    hip_stepper.run();
+//    hip_ = hip_stepper.currentPosition();
+//    delay(DELAY_SPEED);
+//    knee_stepper.run();
+//    knee_ = knee_stepper.currentPosition();
+//    delay(DELAY_SPEED);
 //  }
   //---------------------------------------------------------------------------------------------------
   // Start strides with impulse interruptions.
@@ -361,8 +366,7 @@ void runTrial() {
         knee_stepper.run();
         knee_ = knee_stepper.currentPosition();
         delay(DELAY_SPEED);
-        
-  
+          
         // Impulse detection fires.
         // Fires one step into the specified gait stage
         if(gait_stage == 0x01 && impulseEvent == 1)
@@ -415,8 +419,6 @@ void runTrial() {
   }    
   //---------------------------------------------------------------------------------------------------
   // Resetting position separately
-  Serial.println("Resetting Position...");
-  // Signifies done to T3.6
   hip_stepper.setSpeed(1000);
   hip_stepper.moveTo(HIP_CENTER_POS);
   while(hip_stepper.currentPosition() != HIP_CENTER_POS) {
@@ -431,4 +433,14 @@ void runTrial() {
     knee_ = knee_stepper.currentPosition();
     delay(DELAY_SPEED);
   } 
+  // Resest everything to zero
+  knee_stepper.setCurrentPosition(0);
+  knee_stepper.setMaxSpeed(1000.0);
+  knee_stepper.setAcceleration(400.0);
+  hip_stepper.setCurrentPosition(0);
+  hip_stepper.setMaxSpeed(1000.0);
+  hip_stepper.setAcceleration(400.0);
+  trigger_stepper.setCurrentPosition(0);
+  trigger_stepper.setMaxSpeed(1000.0);
+  trigger_stepper.setAcceleration(400.0);
 }
