@@ -1,12 +1,11 @@
-// Avoid IDE problems by defining struct in septate .h file.
-// Pad record so size is a power of two for best write performance.
 /*
-  Size of the total logged dataset in bits:
- | PACKET # | TIME | DIFF |FSR_HEEL | FSR_TOE | IMU_1 | IMU_2 | IMU_3 |
- |    32    |  32  |  32  |    16    |    16   |  240  |  240  |  240  |
- = 816 bits = 102 Bytes
- Note:
- - Should pad until 128 Bytes for best logging performance.
+  gait_stage codes:
+  0x00 ........... Initial Value
+  0x01-0x08 ...... Gait Stages
+  0x09 ........... Trial Start Flag
+  0x0A ........... Trial Done Flag
+  0x0B ........... Between Trial Flag
+  0x0C ........... Trial Sessions Done Flag
 */
 #ifndef Parameters_h
 #define Parameters_h
@@ -19,7 +18,6 @@ MYUM7SPI imu2(20); // cs pin 2
 #define UM7_MOSI_PIN 11
 #define UM7_MISO_PIN 12
 #define UM7_SCK_PIN 13
-#define IMPULSE_PIN 33
 
 int16_t hip_stepper_ = 0, knee_stepper_ = 0;
 byte gait_stage_ = 0;
@@ -48,8 +46,6 @@ struct data_t {
   float knee_angle;
   uint8_t gait_stage; // Also logs when trial is finished. ie = 10.
   uint8_t impulse_hit;
-
-  // data_t is now perfectly 128 Bytes
 //  uint32_t whitespace;
 };
 // Variable for keeping track of transfer #'s for rate synchronization
@@ -69,10 +65,9 @@ void getI2Cdata() {
 }
 
 float calcKneeAngle() {
-  // y = mx + b... lol
   if(!knee_stepper_)
-    return -1;
-  // Zero knee angle is set to 450 in StepperGait.ino
+    return 0;
+  // Zero knee angle is set to 450 in TrialMechanism
   float angle = (360.0/2038.0) * knee_stepper_ - 450.0*(360.0/2038.0);
   return angle;
 }
@@ -104,9 +99,9 @@ typedef FsFile file_t;
 #endif  // SD_FAT_TYPE
 //------------------------------------------------------------------------------
 // Interval between data records in microseconds.
-// Try 250 with Teensy 3.6, Due, or STM32.
-// Try 2000 with AVR boards, = 500Hz
-// Try 4000 with SAMD Zero boards, = 250Hz
+// 100Hz = 10000usec
+// 160Hz = 6250usec
+// 250Hz = 4000usec
 const uint16_t LOG_INTERVAL_USEC = 4000;
 // Use to compare timestamps for missed packets
 const uint16_t MAX_INTERVAL_USEC = 6000;
@@ -117,9 +112,6 @@ const uint16_t MAX_INTERVAL_USEC = 6000;
 uint32_t t0, log_time;
 // Init the time delta to track missed packets
 uint32_t delta = 0;
-
-// LED to light if overruns occur, define if you have one setup
-#define ERROR_LED_PIN -1
 //------------------------------------------------------------------------------
 // SDCARD_SS_PIN is defined for the built-in SD on some boards.
 #ifndef SDCARD_SS_PIN
@@ -137,9 +129,9 @@ const uint8_t SD_CS_PIN = SDCARD_SS_PIN;
 // Use 2 KiB for other AVR boards.
 #define FIFO_SIZE_SECTORS 4
 #else  // __AVR_ATmega328P__
-// Use 8 KiB for non-AVR boards.
-//#define FIFO_SIZE_SECTORS 16
-// Use 8 KiB for Teensy 3.6
+// Use 2 KiB for Teensy LC
+//#define FIFO_SIZE_SECTORS 4
+// Use 8 KiB for Teensy 3.6 (could use more)
 #define FIFO_SIZE_SECTORS 16
 #endif  // __AVR_ATmega328P__
 //------------------------------------------------------------------------------
@@ -158,13 +150,6 @@ const uint64_t PREALLOCATE_SIZE  =  (uint64_t)PREALLOCATE_SIZE_MiB << 20;
 #define SD_CONFIG SdSpiConfig(SD_CS_PIN, SHARED_SPI, SD_SCK_MHZ(50))
 #endif  // ENABLE_DEDICATED_SPI
 //------------------------------------------------------------------------------
-// Save SRAM if 328.
-#ifdef __AVR_ATmega328P__
-#include "MinimumSerial.h"
-MinimumSerial MinSerial;
-#define Serial MinSerial
-#endif  // __AVR_ATmega328P__
-
 // Boolean used to track whether or not you're just testing the sensors. Won't print
 // the "Missed packet(s)" everytime when testing, otherwise printed in data logging.
 bool test = false;
