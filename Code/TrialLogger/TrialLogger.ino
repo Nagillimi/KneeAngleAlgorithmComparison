@@ -538,10 +538,10 @@ void loop() {
 
   if (c == 's') {  
     int i = 0;
-    while(i < numTrials && !halt) { // Set in Parameters.h
+    while(i < NUM_TRIALS && !halt) { // Set in Parameters.h
       doneTrial = false;
       Serial.print(F("\nBeginning trial ")); Serial.print(i+1);
-      Serial.print(F("/")); Serial.println(numTrials);
+      Serial.print(F("/")); Serial.println(NUM_TRIALS);
       createBinFile();
       // Log data until the done flag is observed
       logData();
