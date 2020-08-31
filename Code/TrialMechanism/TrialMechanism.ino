@@ -17,17 +17,17 @@
 #include "Wire.h"
 
 // Number of gait cycles with impulse interruption
-#define NUM_TRIALS 2
+#define NUM_TRIALS 10
 #define GAIT_IMPULSE_CYCLES 1
 
 // Custom stepper parameters, all reference the CENTER_POS. No decimals!
 #define CALIBRATION_POS 1019
 #define HIP_CENTER_POS 480
 #define KNEE_CENTER_POS 450
-#define IMPULSE_CAL_POS -500
+#define IMPULSE_CAL_POS -2200
 #define IMPULSE_RESET_POS 1500
-#define IMPULSE_LOAD_POS 2115 // 2100 with 1 elastic
-#define IMPULSE_FIRE_POS 2140 // 2115 with 1 elastic
+#define IMPULSE_LOAD_POS 2050 // 2100 with 1 elastic
+#define IMPULSE_FIRE_POS 2080 // 2115 with 1 elastic
 #define DELAY_SPEED 4
 
 int firing_delay_usec = 2667; // DELAY_SPEED * 2000 / 3;
