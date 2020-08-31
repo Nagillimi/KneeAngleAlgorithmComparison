@@ -12,6 +12,9 @@
 #include "MYUM7SPI.h"
 #include "Wire.h"
 
+#define NUM_TRIALS 10
+bool startTrial = false, doneTrial = false, halt = false;
+
 MYUM7SPI imu1(15); // cs pin 1
 MYUM7SPI imu2(20); // cs pin 2
 
@@ -22,9 +25,6 @@ MYUM7SPI imu2(20); // cs pin 2
 int16_t hip_stepper_ = 0, knee_stepper_ = 0;
 byte gait_stage_ = 0;
 byte impulse_hit_ = 0;
-
-int numTrials = 2;
-bool startTrial = false, doneTrial = false, halt = false;
 
 // Collection of data custom for application
 struct data_t {
