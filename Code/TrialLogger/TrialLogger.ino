@@ -66,10 +66,10 @@ void printRecord(Print* pr, data_t* data, bool test_) {
     pr->println();
     
     pr->print(F("HIP_CENTER_POS,"));
-    pr->println(480);
+    pr->println(780);
 
     pr->print(F("KNEE_CENTER_POS,"));
-    pr->println(450);
+    pr->println(390);
 
     // Dataset Titles
     pr->print(F("TRANSFER #"));
@@ -583,13 +583,13 @@ void setup_imus(byte rate_) {
   SPI.setMISO(UM7_MISO_PIN);
   SPI.setSCK(UM7_SCK_PIN);
   // Init UM7 1
+  imu1.calibrate_accelerometers();
+  imu1.zero_gyros();
   imu1.set_all_processed_rate(rate_);
   imu1.set_orientation_rate(rate_, rate_);
-//  imu1.calibrate_accelerometers();
-//  imu1.zero_gyros();
   // Init UM7 2
+  imu2.calibrate_accelerometers();
+  imu2.zero_gyros();
   imu2.set_all_processed_rate(rate_);
   imu2.set_orientation_rate(rate_, rate_);
-//  imu2.calibrate_accelerometers();
-//  imu2.zero_gyros();
 }
