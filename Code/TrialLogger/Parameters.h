@@ -68,7 +68,7 @@ float calcKneeAngle() {
   if(!knee_stepper_)
     return 0;
   // Zero knee angle is set to 450 in TrialMechanism
-  float angle = (360.0/2038.0) * knee_stepper_ - 450.0*(360.0/2038.0);
+  float angle = (360.0/2038.0) * knee_stepper_ - 390.0*(360.0/2038.0);
   return angle;
 }
 //-------------------------------PARAMETERS-------------------------------------
