@@ -17,7 +17,7 @@
 #include "Wire.h"
 
 // Number of gait cycles with impulse interruption
-#define NUM_TRIALS 10
+#define NUM_TRIALS 100
 #define GAIT_IMPULSE_CYCLES 1
 
 // Custom stepper parameters, all reference the CENTER_POS. No decimals!
@@ -117,7 +117,7 @@ void loop() {
     runTrial();
     // Sends done flag to T3.6
     gait_stage = 0x0A; 
-    delay(4); // 4000usec
+    delay(8); // 8000usec
     gait_stage = 0x0B;
 
     Serial.print(". Log");
@@ -278,7 +278,7 @@ void impulseFire() {
     delayMicroseconds(firing_delay_usec);
   }
 }
-//---------------------------------------------------------------------------------------------------
+//===================================================================================================
 // Cycles through Gait Phases BAC 1 to BAC 8
 // Note: For proper multi-stepper function, align delta hip & knee step values together
 void runTrial() {
