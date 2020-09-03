@@ -569,8 +569,10 @@ void loop() {
     createBinFile();
     logData();
   } else if (c == 't') {
+    startTrial = true;
     test = true;
     testSensor();
+    startTrial = false;
   } else {
     Serial.println(F("Invalid entry"));
   }
@@ -592,4 +594,5 @@ void setup_imus(byte rate_) {
   imu2.zero_gyros();
   imu2.set_all_processed_rate(rate_);
   imu2.set_orientation_rate(rate_, rate_);
+
 }
