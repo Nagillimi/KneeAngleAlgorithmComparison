@@ -12,7 +12,7 @@
 #include "MYUM7SPI.h"
 #include "Wire.h"
 
-#define NUM_TRIALS 10
+#define NUM_TRIALS 100
 bool startTrial = false, doneTrial = false, halt = false;
 
 MYUM7SPI imu1(15); // cs pin 1
@@ -102,9 +102,9 @@ typedef FsFile file_t;
 // 100Hz = 10000usec
 // 160Hz = 6250usec
 // 250Hz = 4000usec
-const uint16_t LOG_INTERVAL_USEC = 4000;
+const uint16_t LOG_INTERVAL_USEC = 6250;
 // Use to compare timestamps for missed packets
-const uint16_t MAX_INTERVAL_USEC = 6000;
+const uint16_t MAX_INTERVAL_USEC = 9375; // 1.5x
 //------------------------------------------------------------------------------
 // Initial time before logging starts, set once logging has begun
 // And total log time of session, used to print to csv file once
