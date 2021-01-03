@@ -1,0 +1,14 @@
+%% Loading Thomas Seel's Data for testing
+
+data = readmatrix('gyrodata_prosthesis_walking.csv');
+
+gx_1 = data(:,1);
+gy_1 = data(:,2);
+gz_1 = data(:,3);
+gx_2 = data(:,4);
+gy_2 = data(:,5);
+gz_2 = data(:,6);
+
+% Thomas said his j-vectors came to:
+% j1 = [-0.1,0.5,-0.9]
+% j2 = []
