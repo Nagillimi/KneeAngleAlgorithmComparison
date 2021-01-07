@@ -1,8 +1,9 @@
-function [knee_angle_Allseits,error_Allseits] = Allseits(gx_1,gy_1,gz_1,gx_2,gy_2,gz_2)
+function knee_angle_Allseits = Allseits(gx_1,gy_1,gz_1,gx_2,gy_2,gz_2)
     
+    % Collect individual datasets
     gyrodata = [gx_1,gy_1,gz_1,gx_2,gy_2,gz_2]';
     
-    % Obtaining j vectors, following Seel's 2014 study
+    % Obtaining j-vectors, following Seel's 2012/2014 study
     [j1,j2] = localJ(gyrodata,true);
     J = [j1,j2];
 
@@ -24,9 +25,8 @@ function [knee_angle_Allseits,error_Allseits] = Allseits(gx_1,gy_1,gz_1,gx_2,gy_
     
     
     
-   
     
-    % 
-     knee_angle_Allseits = 1;
+    % Computing Knee angle etc
+    knee_angle_Allseits = 1;
     error_Allseits = 1;
 end
