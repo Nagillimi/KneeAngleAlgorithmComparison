@@ -6,7 +6,7 @@ close
 % j_upper = [-0.1,0.5,-0.9];
 % j_lower = [0,1,0.1];
 
-cd ("/Users/BenMilligan/Desktop/Algorithm Coding/Thomas Seel's Data");
+cd ("C:\Users\Ben\Desktop\Algorithms\Thomas Seel's Data");
 gyrodata = readmatrix('gyrodata_prosthesis_walking.csv');
 
 gx_1 = gyrodata(:,1);
@@ -16,14 +16,23 @@ gx_2 = gyrodata(:,4);
 gy_2 = gyrodata(:,5);
 gz_2 = gyrodata(:,6);
 
-cd ('/Users/BenMilligan/Desktop/Algorithm Coding');
+cd ('C:\Users\Ben\Desktop\Algorithms');
 
 %% Load Gait Trial Data
 
-i = 10;
+i = 1;
 % for i = 1:500
-    cd ('/Volumes/ARCHIVE/IMPULSE GAIT ALGORITHM SELECTION/All Trials/100Hz Trials');
-    dataFile = readmatrix('Trial_10.csv');
+    cd ('N:\IMPULSE GAIT ALGORITHM SELECTION\All Trials\100Hz Trials');
+    
+    % To meet naming convention
+    if i < 10
+        index = '0' + string(i);
+    else
+        index = string(i);
+    end
+    fileString = 'Trial_' + index + '.csv';
+    
+    dataFile = readmatrix(fileString);
     dataFile = dataFile(7:end,:);
     
     packet = dataFile(:,1);
@@ -47,20 +56,38 @@ i = 10;
     gait_stage = dataFile(:,19);
     impulse_hit = dataFile(:,20);
     
-    cd ('/Users/BenMilligan/Desktop/Algorithm Coding');
-    
-    
-%% Test Plots
-
-plot(ax_1)
+    cd ('C:\Users\Ben\Desktop\Algorithms');
 
 %% Allseits Algorithm
 
-[knee_angle_Allseits,error_Allseits] = Allseits(gx_1,gy_1,gz_1,gx_2,gy_2,gz_2);
-
+knee_angle_Allseits = Allseits(gx_1,gy_1,gz_1,gx_2,gy_2,gz_2);
 
 %% Seel Algorithm
 
-[knee_angle_Seel,error_Seel] = Seel(gx_1,gy_1,gz_1,ax_1,ay_1,az_1,gx_2,gy_2,gz_2,ax_2,ay_2,az_2);
+knee_angle_Seel = Seel(gx_1,gy_1,gz_1,ax_1,ay_1,az_1,gx_2,gy_2,gz_2,ax_2,ay_2,az_2);
 
-% end
+%% Plots 
+
+figure(3)
+% Test plot
+plot(stepper_knee_angle)
+hold on
+plot(knee_angle_Seel)
+% plot(knee_angle_Allseits)
+hold off
+
+%% Calculating Errors
+
+% Differences
+Seel_diff = knee_angle_Seel - stepper_knee_angle;
+Allseits_diff = knee_angle_Allseits - stepper_knee_angle;
+
+% Calculating RMSEs ------- CHECK THIS!
+rmse_Seel = mean(sqrt((Seel_diff).^2));
+rmse_Allseits = mean(sqrt((Allseits_diff).^2));
+
+% Calculating MAEs ------- CHECK THIS!
+mae_Seel = mean(abs(Seel_diff));
+mae_Allseits = mean(abs(Allseits_diff));
+
+
