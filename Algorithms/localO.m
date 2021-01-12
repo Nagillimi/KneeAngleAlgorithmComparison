@@ -1,15 +1,16 @@
-function [o1,o2,gyro_dotdata] = localO(acceldata,gyrodata,displaygraph)
+function [o1,o2,gyro_dotdata,x] = localO(acceldata,gyrodata,displaygraph)
 
     tol = 0.0001; N = length(gyrodata(1,:)); axislength = 30;
 
     % Initial guess
-    x(:,1) = [rand*pi,rand*pi,rand*pi,rand*pi]';
+    x(:,1) = [rand,rand,rand,rand]';
     
     % Calculate gyroscope derivatives
     gyro_dotdata = g_deriv(gyrodata);
     
     i = 1; v = 1;
-    while v == 1
+    while (v == 1) && (abs(x(1,i)) < 2*pi) && (abs(x(2,i)) < 2*pi)...
+            && (abs(x(3,i)) < 2*pi) && (abs(x(4,i)) < 2*pi)
         % Calculate o-vectors and error vector. Step 1 & 2.
         e = e_vector(x(:,i),acceldata,gyrodata,gyro_dotdata);
         
@@ -29,10 +30,15 @@ function [o1,o2,gyro_dotdata] = localO(acceldata,gyrodata,displaygraph)
             
             % Return o-vectors from final value (ie, the flatline)
             o1 = -RM_spher(x(1,end),x(2,end))*[1;0;0];
-            o2 = -RM_spher(x(3,end),x(4,end))*[1;0;0];
+            o2 = -RM_spher(x(3,end),x(4,end))*[1;0;0]; 
             
-            % Confirm o-vector signs
-            
+            % Sign convention for o-vectors. Use y-component (up vector)
+            if o1(1) < 0 || o1(2) > 0
+                o1 = -o1;
+            end
+            if o2(2) < 0
+                o2 = -o2;
+            end
             
             disp('O-vectors converged at iteration: ')
             disp(i+1)
@@ -46,6 +52,14 @@ function [o1,o2,gyro_dotdata] = localO(acceldata,gyrodata,displaygraph)
         end
         
         i = i + 1;
+    end
+    
+    % If angles exceeded 2pi and never converged
+    if (v == 1)
+        % Redo algorithm (recursive) without printing graphs
+        % Overwrites the j1,j2,x variables
+        clear o1 o2 x;
+        [o1,o2,gyro_dotdata,x] = localO(acceldata,gyrodata,0);
     end
     
     if displaygraph == true
@@ -121,7 +135,9 @@ function grad = polar_gradient(x,acceldata,gyrodata,gyro_dotdata)
     
     % Compute Jacobian
     de_do = ones(length(gyrodata(1,:)),6);
-    for i = 1:length(de_do(:,1))
+    
+    % Start at index 3 since gyro_dotdata is zero for i=1,2
+    for i = 3:length(de_do(:,1))
         temp1 = cross(gyrodata(1:3,i),cross(gyrodata(1:3,i),o_k_us_est))...
                 + cross(gyro_dotdata(1:3,i),o_k_us_est);
         temp2 = cross(gyrodata(4:6,i),cross(gyrodata(4:6,i),o_k_ls_est))...
@@ -136,7 +152,7 @@ function grad = polar_gradient(x,acceldata,gyrodata,gyro_dotdata)
                 + cross(oo_2,gyro_dotdata(4:6,i));
         
         de_do(i,:) = 1.*[num1/norm(oo_1);
-                        -num2/norm(oo_2)]';
+                         num2/norm(oo_2)]';
     end
     
     % Trig substitutes
