@@ -4,14 +4,15 @@
 % Thomas said his j-vectors STATICALLY came to:
 % j_upper = [-0.1,0.5,-0.9];
 % j_lower = [0,1,0.1];
-function [j1,j2] = localJ(gyrodata,displaygraph)
-    tol = 0.0001; N = length(gyrodata(1,:)); axislength = 25;
+function [j1,j2,x] = localJ(gyrodata,displaygraph)
+    tol = 0.0001; N = length(gyrodata(1,:)); axislength = 20;
 
     % Initial guess
-    x(:,1) = [rand*pi,rand*pi,rand*pi,rand*pi]';
+    x(:,1) = [rand,rand,rand,rand]';
     
     i = 1; v = 1;
-    while v == 1
+    while (v == 1) && (abs(x(1,i)) < 2*pi) && (abs(x(2,i)) < 2*pi)...
+            && (abs(x(3,i)) < 2*pi) && (abs(x(4,i)) < 2*pi)
         % Calculate j-vectors and error vector. Step 1 & 2.
         e = e_vector(x(:,i),gyrodata);
         
@@ -33,6 +34,15 @@ function [j1,j2] = localJ(gyrodata,displaygraph)
             j1 = -RM_spher(x(1,end),x(2,end))*[1;0;0];
             j2 = -RM_spher(x(3,end),x(4,end))*[1;0;0];
             
+            % Sign convention for j-vectors. Use the z-component (parallel 
+            % to top face), should point medially.
+            if j1(3) < 0
+                j1 = -j1;
+            end
+            if j2(3) < 0
+                j2 = -j2;
+            end
+            
             disp('J-vectors converged at iteration: ')
             disp(i+1)
             disp('j1 = ')
@@ -43,8 +53,16 @@ function [j1,j2] = localJ(gyrodata,displaygraph)
             v = 0;
             disp('Error: Tolerance too tight')
         end
-        
+        % Iterate if no convergance
         i = i + 1;
+    end
+    
+    % If angles exceeded 2pi and never converged
+    if (v == 1)
+        % Redo algorithm (recursive) without printing graphs
+        % Overwrites the j1,j2,x variables
+        clear j1 j2 x;
+        [j1,j2,x] = localJ(gyrodata,0);
     end
     
     if displaygraph == true
@@ -55,9 +73,10 @@ function [j1,j2] = localJ(gyrodata,displaygraph)
         plot(x(2,:))
         plot(x(3,:))
         plot(x(4,:))
-        title('X-vector in polar coordinates');
+        title('J-vectors in Polar Coordinates');
         ylabel('Radians');
         xlabel('Gradient-Descent Iteration');
+        legend({'\theta_1','\phi_1','\theta_2','\phi_2'});
         xlim([1,axislength]);
         hold off
     end
@@ -77,7 +96,7 @@ end
 function e_vec = e_vector(x,gyrodata)
     gyrodata = gyrodata(:,~isnan(gyrodata(1,:))); % ignore nan-columns
 
-    % Get j-vector estimates
+    % Get j-vector estimates at index k (from main)
     j_k_us_est = RM_spher(x(1),x(2))*[1;0;0];
     j_k_ls_est = RM_spher(x(3),x(4))*[1;0;0];
     
@@ -94,7 +113,7 @@ end
 function grad = polar_gradient(x,gyrodata)
     gyrodata = gyrodata(:,~isnan(gyrodata(1,:))); % ignore nan-columns
     
-    % Get j-vector estimates
+    % Get j-vector estimates at index k (from main)
     j_k_us_est = RM_spher(x(1),x(2))*[1;0;0];
     j_k_ls_est = RM_spher(x(3),x(4))*[1;0;0];
     
@@ -105,7 +124,7 @@ function grad = polar_gradient(x,gyrodata)
         temp2 = cross(gyrodata(4:6,i),j_k_ls_est);
         
         de_dj(i,:) = 1.*[cross(temp1,gyrodata(1:3,i))/norm(temp1);
-                        -cross(temp2,gyrodata(4:6,i))/norm(temp2)]';
+                        -cross(temp2,gyrodata(4:6,i))/norm(temp2)];
     end
     
     % Trig substitutes
