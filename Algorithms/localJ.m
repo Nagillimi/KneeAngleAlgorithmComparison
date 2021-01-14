@@ -68,6 +68,7 @@ function [j1,j2,x] = localJ(gyrodata,displaygraph)
     if displaygraph == true
         % Figures for debugging
         figure(1)
+        subplot(2,1,1)
         plot(x(1,:))
         hold on
         plot(x(2,:))
