@@ -40,12 +40,12 @@ function [NewAccelData] = CorrectAccelBias(acceldata,stepper_knee_angle,impulse_
     
     % Correcting the accels
     for j = 1:length(acceldata(1,:))
-        NewAccelData(1,j) = -(acceldata(1,j)) + 0.45;
-        NewAccelData(2,j) = -(acceldata(2,j)) - 0.89;
-        NewAccelData(3,j) = -(acceldata(3,j) - az_1_BIAS);
+        NewAccelData(1,j) = -(acceldata(1,j)-ax_1_BIAS) + 0.45;
+        NewAccelData(2,j) = -(acceldata(2,j)-ay_1_BIAS) - 0.89;
+        NewAccelData(3,j) = -(acceldata(3,j)-az_1_BIAS);
 
-        NewAccelData(4,j) = -(acceldata(4,j)) + 0.11;
-        NewAccelData(5,j) = -(acceldata(5,j)) - 0.99;
-        NewAccelData(6,j) = -(acceldata(6,j) - az_2_BIAS);
+        NewAccelData(4,j) = -(acceldata(4,j)-ax_2_BIAS) + 0.11;
+        NewAccelData(5,j) = -(acceldata(5,j)-ay_2_BIAS) - 0.99;
+        NewAccelData(6,j) = -(acceldata(6,j)-az_2_BIAS);
     end
 end
