@@ -64,7 +64,8 @@ function [o1,o2,gyro_dotdata,x] = localO(acceldata,gyrodata,displaygraph)
     
     if displaygraph == true
         % Figures for debugging
-        figure(2)
+        figure(1)
+        subplot(2,1,2)
         plot(x(1,:))
         hold on
         plot(x(2,:))
@@ -101,6 +102,15 @@ function g_dot = g_deriv(gyrodata)
         g_dot(4:6,i) = ( gyrodata(4:6,i-2) - 8*(gyrodata(4:6,i-1))...
             + 8*(gyrodata(4:6,i+1)) - gyrodata(4:6,i+2) ) ./ 12;
     end
+    
+    % Low Pass filter the noise-enhancing derivative, 2Hz --- CHECK THIS!!
+    [Bl,Al] = butter(2,5/100,'low');
+    g_dot(1,:) = filtfilt(Bl,Al,g_dot(1,:));
+    g_dot(2,:) = filtfilt(Bl,Al,g_dot(2,:));
+    g_dot(3,:) = filtfilt(Bl,Al,g_dot(3,:));
+    g_dot(4,:) = filtfilt(Bl,Al,g_dot(4,:));
+    g_dot(5,:) = filtfilt(Bl,Al,g_dot(5,:));
+    g_dot(6,:) = filtfilt(Bl,Al,g_dot(6,:));
 end
 
 function e_vec = e_vector(x,acceldata,gyrodata,gyro_dotdata)
@@ -120,7 +130,7 @@ function e_vec = e_vector(x,acceldata,gyrodata,gyro_dotdata)
         temp2 = cross(gyrodata(4:6,i),cross(gyrodata(4:6,i),o_k_ls_est))...
                 + cross(gyro_dotdata(4:6,i),o_k_ls_est);
         
-        e_vec(i) = 1.*(norm(acceldata(1:3,i) - temp1) - norm(acceldata(4:6,i) - temp2));
+        e_vec(i) = 1.*( norm(acceldata(1:3,i) - temp1) - norm(acceldata(4:6,i) - temp2) );
     end
 end
 
