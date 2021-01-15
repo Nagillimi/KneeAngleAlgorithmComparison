@@ -45,7 +45,7 @@ for i = 1:N
     time = dataFile(:,2);
     time_delta = dataFile(:,3);
     
-    % Accel data is rotated 90deg, since calibration wasn't applied on a
+    % Accel data is rotated since calibration wasn't applied on a
     % flat surface, but instead a vertical surface.
     gx_1 = dataFile(:,4);
     gy_1 = dataFile(:,5);
@@ -71,7 +71,8 @@ for i = 1:N
 %     knee_angle_Allseits = Allseits(gx_1,gy_1,gz_1,gx_2,gy_2,gz_2);
 
     % Seel Algorithm
-    [acceldata,a,g,knee_angle_Seel] = Seel(gx_1,gy_1,gz_1,ax_1,ay_1,az_1,gx_2,gy_2,gz_2,ax_2,ay_2,az_2,stepper_knee_angle,impulse_hit);
+    [acceldata,a,g,knee_angle_Seel] = Seel(gx_1,gy_1,gz_1,ax_1,ay_1,az_1,...
+            gx_2,gy_2,gz_2,ax_2,ay_2,az_2,stepper_knee_angle,gait_stage);
 
     % Calculating Errors:
     % Differences
@@ -90,12 +91,14 @@ for i = 1:N
 
     figure(i+1)
     % Test plot
-    plot(stepper_knee_angle)
+    N = 4000;
+    plot(stepper_knee_angle(1:N))
     hold on
-    plot(g)
-    plot(knee_angle_Seel)
+    plot(g(1:N))
+    plot(a(1:N))
+    plot(knee_angle_Seel(1:N))
     hold off
-    legend('Stepper','Gyro Only','Seel','NumColumns',3)
+    legend('Stepper','Gyro Only','Accel Only','CF','NumColumns',2)
     
 end
 
