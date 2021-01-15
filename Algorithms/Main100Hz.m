@@ -1,8 +1,10 @@
 
 clear
-close
+close all
 
-N = 1;
+N = 20; % Number of files to iterate through
+axisL = 15000; % Legnth of debugging axis
+SLOP = 2.89*2; % Stepper Slop in degrees (x2 steppers...)
 
 %% Load Seel Test Data
 % j_upper = [-0.1,0.5,-0.9];
@@ -76,7 +78,7 @@ for i = 1:N
 
     % Calculating Errors:
     % Differences
-    Seel_diff = knee_angle_Seel - stepper_knee_angle;
+    Seel_diff = g(1:axisL) - stepper_knee_angle(1:axisL);
 %     Allseits_diff(i) = knee_angle_Allseits - stepper_knee_angle;
 
     % Calculating RMSEs ------- CHECK THIS!
@@ -88,17 +90,23 @@ for i = 1:N
 %     mae_Allseits(i) = mean(abs(Allseits_diff));
 
     % Plots 
-
+    
+    high = stepper_knee_angle(1:axisL) + SLOP;
+    low = stepper_knee_angle(1:axisL) - SLOP;
+    
+    
     figure(i+1)
     % Test plot
-    N = 4000;
-    plot(stepper_knee_angle(1:N))
+
+    plot(stepper_knee_angle(1:axisL),'b-')
     hold on
-    plot(g(1:N))
-    plot(a(1:N))
-    plot(knee_angle_Seel(1:N))
+    plot(high,'b:','LineWidth',0.5)
+    plot(low,'b:','LineWidth',0.5)
+%     plot(g(1:axisL),'r-')
+%     plot(a(1:axisL),'g-')
+    plot(knee_angle_Seel(1:axisL))
     hold off
-    legend('Stepper','Gyro Only','Accel Only','CF','NumColumns',2)
+%     legend('Stepper','Gyro Only','Accel Only','CF','NumColumns',2)
     
 end
 
