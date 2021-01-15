@@ -36,10 +36,10 @@ function [j1,j2,x] = localJ(gyrodata,displaygraph)
             
             % Sign convention for j-vectors. Use the z-component (parallel 
             % to top face), should point medially.
-            if j1(3) < 0
+            if j1(3) > 0
                 j1 = -j1;
             end
-            if j2(3) < 0
+            if j2(3) > 0
                 j2 = -j2;
             end
             
