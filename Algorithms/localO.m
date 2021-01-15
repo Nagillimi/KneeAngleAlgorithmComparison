@@ -103,8 +103,8 @@ function g_dot = g_deriv(gyrodata)
             + 8*(gyrodata(4:6,i+1)) - gyrodata(4:6,i+2) ) ./ 12;
     end
     
-    % Low Pass filter the noise-enhancing derivative, 2Hz --- CHECK THIS!!
-    [Bl,Al] = butter(2,5/100,'low');
+    % Low Pass filter the noise-enhancing derivative, 20Hz --- CHECK THIS!!
+    [Bl,Al] = butter(2,20/100,'low');
     g_dot(1,:) = filtfilt(Bl,Al,g_dot(1,:));
     g_dot(2,:) = filtfilt(Bl,Al,g_dot(2,:));
     g_dot(3,:) = filtfilt(Bl,Al,g_dot(3,:));
