@@ -2,15 +2,15 @@ clear
 close
 
 % File #
-i = 2;
+filenum = 20;
 
 cd ('N:\IMPULSE GAIT ALGORITHM SELECTION\All Trials\100Hz Trials');
     
 % To meet naming convention
-if i < 10
-    index = '0' + string(i);
+if filenum < 10
+    index = '0' + string(filenum);
 else
-    index = string(i);
+    index = string(filenum);
 end
 fileString = 'Trial_' + index + '.csv';
 
