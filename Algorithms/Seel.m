@@ -1,4 +1,4 @@
-function [acceldata,accel_angle,gyro_angle,knee_angle_Seel] = Seel(gx_1,gy_1,gz_1,...
+function [acceldata,accel_angle,gyro_angle,knee_angle_Seel] = Seel(f,gx_1,gy_1,gz_1,...
     ax_1,ay_1,az_1,gx_2,gy_2,gz_2,ax_2,ay_2,az_2,stepper_knee_angle,gait_stage)
     % As defined in (Seel, 2014), can range from [0,1]. 
     % The sensor fusion constant, he did 0.01
@@ -13,11 +13,11 @@ function [acceldata,accel_angle,gyro_angle,knee_angle_Seel] = Seel(gx_1,gy_1,gz_
     acceldata_ = [ax_1,ay_1,az_1,ax_2,ay_2,az_2]';
     
     % Correct acceldata (from calibration error)
-%     acceldata = CorrectAccelBias(acceldata_,stepper_knee_angle,gait_stage);
-    acceldata = acceldata_;
+    acceldata = CorrectAccelBias(acceldata_,stepper_knee_angle,gait_stage);
+%     acceldata = acceldata_; % Or don't correct it
     
-    % Length of dataset
-    N = length(gyrodata(1,:));
+    % Length of trial dataset
+    N = length(gx_1);
     
     % Obtaining j vectors, following Seel's 2014 study
     [j1,j2,~] = localJ(gyrodata,0);
@@ -40,7 +40,7 @@ function [acceldata,accel_angle,gyro_angle,knee_angle_Seel] = Seel(gx_1,gy_1,gz_
     % Gyro-derived angle
     gyro_angle_ = zeros(N,1); 
     % Time Vector
-    t = (1/100).*(1:1:N)'; 
+    t = (1/f).*(1:1:N)'; 
     for i = 1:N
         % Integrate
         gyro_angle_(i) = dot(gyrodata(1:3,i),j1) - dot(gyrodata(4:6,i),j2);
@@ -79,7 +79,7 @@ function [acceldata,accel_angle,gyro_angle,knee_angle_Seel] = Seel(gx_1,gy_1,gz_
         % Accel-derived angle
         
         % Double Angle solution. [atan(y/x)]
-        alpha(i) = abs(atand(u(2,i)/u(1,i))); beta(i) = abs(atand(v(2,i)/v(1,i)));
+        alpha(i) = abs(atand(u(2,i)/u(1,i))); beta(i) = abs(atand(v(1,i)/v(2,i)));
         
         % Various angle conditions
         
@@ -101,7 +101,7 @@ function [acceldata,accel_angle,gyro_angle,knee_angle_Seel] = Seel(gx_1,gy_1,gz_
 %             accel_angle(i) = (beta(i) - alpha(i));
 %         end
         
-        accel_angle(i) = (beta(i) - alpha(i));
+        accel_angle(i) = abs(90 - (beta(i) + alpha(i)));
 %         % u on RS, v on LS
 %         if (u(1,i)>0) && (u(2,i)>0) && (v(1,i)<0) && (v(2,i)>0)
 %             accel_angle(i) = alpha(i) + beta(i);
