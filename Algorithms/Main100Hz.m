@@ -2,8 +2,9 @@
 clear
 close all
 
-N = 20; % Number of files to iterate through
-axisL = 15000; % Legnth of debugging axis
+N = 39; % Number of files to iterate through
+freq = 100; % Frequency of data
+axisL = 20000; % Legnth of debugging axis
 SLOP = 2.89*2; % Stepper Slop in degrees (x2 steppers...)
 
 %% Load Seel Test Data
@@ -27,12 +28,18 @@ SLOP = 2.89*2; % Stepper Slop in degrees (x2 steppers...)
 % [j1,j2,x_j] = localJ(gyrodata,true);
 
 %% Run Gait Trial Data
-
+% Init
+TrialDir = 'N:\IMPULSE GAIT ALGORITHM SELECTION\All Trials\' + string(freq) + 'Hz Trials';
+WorkingDir = 'C:\Users\Ben\Desktop\Algorithms';
 rmse_Seel = zeros(N,1); mae_Seel = zeros(N,1);
+rmse_Allseits = zeros(N,1); mae_Allseits = zeros(N,1);
+    
 for i = 1:N
-    cd ('N:\IMPULSE GAIT ALGORITHM SELECTION\All Trials\100Hz Trials');
+    cd (TrialDir);
     
     % To meet naming convention
+%     if i < 10
+%         index = '00' + string(i);
     if i < 10
         index = '0' + string(i);
     else
@@ -67,51 +74,52 @@ for i = 1:N
     gait_stage = dataFile(:,19);
     impulse_hit = dataFile(:,20);
     
-    cd ('C:\Users\Ben\Desktop\Algorithms');
+    cd (WorkingDir);    
     
     % Allseits Algorithm
-%     knee_angle_Allseits = Allseits(gx_1,gy_1,gz_1,gx_2,gy_2,gz_2);
+    knee_angle_Allseits = Allseits(freq,gx_1,gy_1,gz_1,gx_2,gy_2,gz_2)';
 
     % Seel Algorithm
-    [acceldata,a,g,knee_angle_Seel] = Seel(gx_1,gy_1,gz_1,ax_1,ay_1,az_1,...
-            gx_2,gy_2,gz_2,ax_2,ay_2,az_2,stepper_knee_angle,gait_stage);
+%     [~,~,~,knee_angle_Seel] = Seel(f,gx_1,gy_1,gz_1,ax_1,ay_1,az_1,...
+%             gx_2,gy_2,gz_2,ax_2,ay_2,az_2,stepper_knee_angle,gait_stage);
 
     % Calculating Errors:
     % Differences
-    Seel_diff = g(1:axisL) - stepper_knee_angle(1:axisL);
-%     Allseits_diff(i) = knee_angle_Allseits - stepper_knee_angle;
+%     Seel_diff = knee_angle_Seel - stepper_knee_angle;
+    Allseits_diff = knee_angle_Allseits - stepper_knee_angle;
 
     % Calculating RMSEs ------- CHECK THIS!
-    rmse_Seel(i) = sqrt(mean(Seel_diff.^2));
-%     rmse_Allseits(i) = mean(sqrt((Allseits_diff).^2));
+%     rmse_Seel(i) = sqrt(mean(Seel_diff.^2));
+    rmse_Allseits(i) = sqrt(mean(Allseits_diff.^2));
 
     % Calculating MAEs ------- CHECK THIS!
-    mae_Seel(i) = mean(abs(Seel_diff));
-%     mae_Allseits(i) = mean(abs(Allseits_diff));
-
-    % Plots 
+%     mae_Seel(i) = mean(abs(Seel_diff));
+    mae_Allseits(i) = mean(abs(Allseits_diff));
     
-    high = stepper_knee_angle(1:axisL) + SLOP;
-    low = stepper_knee_angle(1:axisL) - SLOP;
+    % Error bars
+    high = stepper_knee_angle + SLOP;
+    low = stepper_knee_angle - SLOP;
     
-    
-    figure(i+1)
     % Test plot
-
-    plot(stepper_knee_angle(1:axisL),'b-')
+    figure(i+1)
+    plot(stepper_knee_angle,'b-')
     hold on
     plot(high,'b:','LineWidth',0.5)
     plot(low,'b:','LineWidth',0.5)
-%     plot(g(1:axisL),'r-')
-%     plot(a(1:axisL),'g-')
-    plot(knee_angle_Seel(1:axisL))
+%     plot(knee_angle_Seel(1:axisL),'g-')
+    plot(knee_angle_Allseits,'r-')
     hold off
 %     legend('Stepper','Gyro Only','Accel Only','CF','NumColumns',2)
     
 end
 
-MAE_SEEL = mean(mae_Seel);
-RMSE_SEEL = mean(rmse_Seel);
+% MAE_SEEL = mean(mae_Seel);
+% RMSE_SEEL = mean(rmse_Seel);
+MAE_ALLSEITS = mean(mae_Allseits);
+RMSE_ALLSEITS = mean(rmse_Allseits);
+
+figure(i+2)
+bar(RMSE_ALLSEITS)
 
 % figure(4)
 % plot(a)
