@@ -2,7 +2,7 @@ clear
 close
 
 % File #
-filenum = 20;
+filenum = 121;
 
 cd ('N:\IMPULSE GAIT ALGORITHM SELECTION\All Trials\100Hz Trials');
     
@@ -52,7 +52,7 @@ acceldata_ = [ax_1,ay_1,az_1,ax_2,ay_2,az_2]';
 % Correct acceldata (from calibration error)
 acceldata = CorrectAccelBias(acceldata_,stepper_knee_angle,gait_stage);
 
-%% Test Plots
+% Test Plots
 
 M = 1;
 N = 15562;
