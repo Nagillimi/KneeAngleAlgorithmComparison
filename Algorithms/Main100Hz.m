@@ -2,7 +2,9 @@
 clear
 close all
 
-N = 39; % Number of files to iterate through
+s_file = 1; % First file to iterate from
+f_file = 200; % Last file to iterate to
+files_to_ignore = [40,97]';
 freq = 100; % Frequency of data
 axisL = 20000; % Legnth of debugging axis
 SLOP = 2.89*2; % Stepper Slop in degrees (x2 steppers...)
@@ -31,10 +33,14 @@ SLOP = 2.89*2; % Stepper Slop in degrees (x2 steppers...)
 % Init
 TrialDir = 'N:\IMPULSE GAIT ALGORITHM SELECTION\All Trials\' + string(freq) + 'Hz Trials';
 WorkingDir = 'C:\Users\Ben\Desktop\Algorithms';
-rmse_Seel = zeros(N,1); mae_Seel = zeros(N,1);
-rmse_Allseits = zeros(N,1); mae_Allseits = zeros(N,1);
+Tot_files = f_file - s_file; 
+read_file = true; files_read = 0;
+% rmse_Seel = zeros(Tot_files,1); mae_Seel = zeros(Tot_files,1);
+rmse_Allseits = zeros(Tot_files,1); mae_Allseits = zeros(Tot_files,1);
     
-for i = 1:N
+for i = s_file:f_file
+    read_file = true;
+    
     cd (TrialDir);
     
     % To meet naming convention
@@ -45,81 +51,92 @@ for i = 1:N
     else
         index = string(i);
     end
-    fileString = 'Trial_' + index + '.csv';
     
-    dataFile = readmatrix(fileString);
-    dataFile = dataFile(7:end,:);
+    % Reject sus files
+    for j = 1:length(files_to_ignore)
+        if i == files_to_ignore(j)
+            read_file = false;
+        end
+    end
     
-    packet = dataFile(:,1);
-    time = dataFile(:,2);
-    time_delta = dataFile(:,3);
-    
-    % Accel data is rotated since calibration wasn't applied on a
-    % flat surface, but instead a vertical surface.
-    gx_1 = dataFile(:,4);
-    gy_1 = dataFile(:,5);
-    gz_1 = dataFile(:,6);
-    ax_1 = dataFile(:,7);
-    ay_1 = dataFile(:,8);
-    az_1 = dataFile(:,9);
-    gx_2 = dataFile(:,10);
-    gy_2 = dataFile(:,11);
-    gz_2 = dataFile(:,12);
-    ax_2 = dataFile(:,13);
-    ay_2 = dataFile(:,14);
-    az_2 = dataFile(:,15);
-    hip_stepper =  dataFile(:,16);
-    knee_stepper = dataFile(:,17);
-    stepper_knee_angle = dataFile(:,18);
-    gait_stage = dataFile(:,19);
-    impulse_hit = dataFile(:,20);
-    
-    cd (WorkingDir);    
-    
-    % Allseits Algorithm
-    knee_angle_Allseits = Allseits(freq,gx_1,gy_1,gz_1,gx_2,gy_2,gz_2)';
+    if read_file == true
+        fileString = 'Trial_' + index + '.csv';
 
-    % Seel Algorithm
-%     [~,~,~,knee_angle_Seel] = Seel(f,gx_1,gy_1,gz_1,ax_1,ay_1,az_1,...
-%             gx_2,gy_2,gz_2,ax_2,ay_2,az_2,stepper_knee_angle,gait_stage);
+        dataFile = readmatrix(fileString);
+        dataFile = dataFile(7:end,:);
 
-    % Calculating Errors:
-    % Differences
-%     Seel_diff = knee_angle_Seel - stepper_knee_angle;
-    Allseits_diff = knee_angle_Allseits - stepper_knee_angle;
+        packet = dataFile(:,1);
+        time = dataFile(:,2);
+        time_delta = dataFile(:,3);
 
-    % Calculating RMSEs ------- CHECK THIS!
-%     rmse_Seel(i) = sqrt(mean(Seel_diff.^2));
-    rmse_Allseits(i) = sqrt(mean(Allseits_diff.^2));
+        % Accel data is rotated since calibration wasn't applied on a
+        % flat surface, but instead a vertical surface.
+        gx_1 = dataFile(:,4);
+        gy_1 = dataFile(:,5);
+        gz_1 = dataFile(:,6);
+        ax_1 = dataFile(:,7);
+        ay_1 = dataFile(:,8);
+        az_1 = dataFile(:,9);
+        gx_2 = dataFile(:,10);
+        gy_2 = dataFile(:,11);
+        gz_2 = dataFile(:,12);
+        ax_2 = dataFile(:,13);
+        ay_2 = dataFile(:,14);
+        az_2 = dataFile(:,15);
+        hip_stepper =  dataFile(:,16);
+        knee_stepper = dataFile(:,17);
+        stepper_knee_angle = dataFile(:,18);
+        gait_stage = dataFile(:,19);
+        impulse_hit = dataFile(:,20);
 
-    % Calculating MAEs ------- CHECK THIS!
-%     mae_Seel(i) = mean(abs(Seel_diff));
-    mae_Allseits(i) = mean(abs(Allseits_diff));
+        cd (WorkingDir);    
+
+        % Allseits Algorithm
+        knee_angle_Allseits = Allseits(freq,gx_1,gy_1,gz_1,gx_2,gy_2,gz_2)';
+
+        % Seel Algorithm
+    %     [~,~,~,knee_angle_Seel] = Seel(f,gx_1,gy_1,gz_1,ax_1,ay_1,az_1,...
+    %             gx_2,gy_2,gz_2,ax_2,ay_2,az_2,stepper_knee_angle,gait_stage);
+
+        % Calculating Errors:
+        % Differences
+    %     Seel_diff = knee_angle_Seel - stepper_knee_angle;
+        Allseits_diff = knee_angle_Allseits - stepper_knee_angle;
+
+        % Calculating RMSEs ------- CHECK THIS!
+    %     rmse_Seel(i-(s_file-1)) = sqrt(mean(Seel_diff.^2));
+        rmse_Allseits(i-(s_file-1)) = sqrt(mean(Allseits_diff.^2));
+
+        % Calculating MAEs ------- CHECK THIS!
+    %     mae_Seel(i-(s_file-1)) = mean(abs(Seel_diff));
+        mae_Allseits(i-(s_file-1)) = mean(abs(Allseits_diff));
+
+        % Error bars
+        high = stepper_knee_angle + SLOP;
+        low = stepper_knee_angle - SLOP;
+
+        % Test plot
+    %     figure(i+1)
+    %     plot(stepper_knee_angle,'b-')
+    %     hold on
+    %     plot(high,'b:','LineWidth',0.5)
+    %     plot(low,'b:','LineWidth',0.5)
+    %     plot(knee_angle_Seel(1:axisL),'g-')
+    %     plot(knee_angle_Allseits,'r-')
+    %     hold off
+    %     legend('Stepper','Gyro Only','Accel Only','CF','NumColumns',2)
     
-    % Error bars
-    high = stepper_knee_angle + SLOP;
-    low = stepper_knee_angle - SLOP;
-    
-    % Test plot
-    figure(i+1)
-    plot(stepper_knee_angle,'b-')
-    hold on
-    plot(high,'b:','LineWidth',0.5)
-    plot(low,'b:','LineWidth',0.5)
-%     plot(knee_angle_Seel(1:axisL),'g-')
-    plot(knee_angle_Allseits,'r-')
-    hold off
-%     legend('Stepper','Gyro Only','Accel Only','CF','NumColumns',2)
-    
+        files_read = files_read + 1;
+    end
 end
 
 % MAE_SEEL = mean(mae_Seel);
 % RMSE_SEEL = mean(rmse_Seel);
-MAE_ALLSEITS = mean(mae_Allseits);
-RMSE_ALLSEITS = mean(rmse_Allseits);
+MAE_ALLSEITS = sum(mae_Allseits)/files_read;
+RMSE_ALLSEITS = sum(rmse_Allseits)/files_read;
 
-figure(i+2)
-bar(RMSE_ALLSEITS)
+% figure(i+2)
+% bar(RMSE_ALLSEITS)
 
 % figure(4)
 % plot(a)
