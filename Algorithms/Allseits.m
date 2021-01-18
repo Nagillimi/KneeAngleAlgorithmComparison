@@ -1,4 +1,39 @@
 function knee_angle_Allseits = Allseits(f,gx_1,gy_1,gz_1,gx_2,gy_2,gz_2)
+%     f = 100;
+    
+    % Remove NaN data
+%     gx_1 = gx_1( ~any( isnan( gx_1 ) | isinf( gx_1 ), 2 ))
+%     gy_1 = gy_1( ~any( isnan( gy_1 ) | isinf( gy_1 ), 2 ))
+%     gz_1 = gz_1( ~any( isnan( gz_1 ) | isinf( gz_1 ), 2 ))
+%     gx_2 = gx_2( ~any( isnan( gx_2 ) | isinf( gx_2 ), 2 ))
+%     gy_2 = gy_2( ~any( isnan( gy_2 ) | isinf( gy_2 ), 2 ))
+%     gz_2 = gz_2( ~any( isnan( gz_2 ) | isinf( gz_2 ), 2 ))
+    
+%     gx_1 = zero_order_hold_remove_nan(gx_1);
+%     gy_1 = zero_order_hold_remove_nan(gy_1);
+%     gz_1 = zero_order_hold_remove_nan(gz_1);
+%     gx_2 = zero_order_hold_remove_nan(gx_2);
+%     gy_2 = zero_order_hold_remove_nan(gy_2);
+%     gz_2 = zero_order_hold_remove_nan(gz_2);
+    
+    
+%     gx_1 = rmmissing(gx_1);
+%     gy_1 = rmmissing(gy_1);
+%     gz_1 = rmmissing(gz_1);
+%     gx_2 = rmmissing(gx_2);
+%     gy_2 = rmmissing(gy_2);
+%     gz_2 = rmmissing(gz_2);
+    
+    % Resize if NaN found
+%     data_no_NaN = [length(gx_1),length(gy_1),length(gz_1),length(gx_2),length(gy_2),length(gz_2)];
+%     min_len = min(data_no_NaN);
+%     gx_1 = gx_1(1:min_len);
+%     gy_1 = gy_1(1:min_len);
+%     gz_1 = gz_1(1:min_len);
+%     gx_2 = gx_2(1:min_len);
+%     gy_2 = gy_2(1:min_len);
+%     gz_2 = gz_2(1:min_len);
+    
     % Collect individual datasets
     gyrodata = [gx_1,gy_1,gz_1,gx_2,gy_2,gz_2]';
     
