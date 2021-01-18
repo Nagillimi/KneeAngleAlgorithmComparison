@@ -5,6 +5,7 @@
 % j_upper = [-0.1,0.5,-0.9];
 % j_lower = [0,1,0.1];
 function [j1,j2,x] = localJ(gyrodata,displaygraph)
+%     gyrodata = gyrodata(:,(~isnan(gyrodata(1,:)) | ~isinf(gyrodata(1,:))) );
     tol = 0.0001; N = length(gyrodata(1,:)); axislength = 20;
 
     % Initial guess
@@ -95,7 +96,7 @@ function M = RM_spher(a,i)
 end
 
 function e_vec = e_vector(x,gyrodata)
-    gyrodata = gyrodata(:,~isnan(gyrodata(1,:))); % ignore nan-columns
+    gyrodata = gyrodata(:,(~isnan(gyrodata(1,:)) | ~isinf(gyrodata(1,:))) ); % ignore nan-columns
 
     % Get j-vector estimates at index k (from main)
     j_k_us_est = RM_spher(x(1),x(2))*[1;0;0];
@@ -112,7 +113,7 @@ function e_vec = e_vector(x,gyrodata)
 end
 
 function grad = polar_gradient(x,gyrodata)
-    gyrodata = gyrodata(:,~isnan(gyrodata(1,:))); % ignore nan-columns
+    gyrodata = gyrodata(:,(~isnan(gyrodata(1,:)) | ~isinf(gyrodata(1,:))) ); % ignore nan-columns
     
     % Get j-vector estimates at index k (from main)
     j_k_us_est = RM_spher(x(1),x(2))*[1;0;0];
